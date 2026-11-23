@@ -25,10 +25,11 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:14px solid var(--brass);transition:none}
 #tgt{color:var(--paper)}
 #bl{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:grid;gap:6px;width:250px}
-.bar{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px}
+.bar{display:grid;grid-template-columns:76px 1fr;align-items:center;gap:8px}
 .bar i{display:block;height:10px;background:#0008;border:2px solid #000}
 .bar b{display:block;height:100%;background:var(--sage);width:100%}
 #stb{background:var(--brass)}
+#ftb{background:var(--dim);width:0}
 #cargo{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:3px;font-size:8px}
 #cargo li{display:flex;justify-content:space-between;gap:8px}
 #cargo li.late{color:var(--blood)}
@@ -101,7 +102,8 @@ body.touch #xh{display:none}
   <canvas id="mini" width="150" height="199"></canvas>
   <div id="bl" class="plq">
     <div class="bar"><span>COACH</span><i><b id="hpb"></b></i></div>
-    <div class="bar"><span>TEAM</span><i><b id="stb"></b></i></div>
+    <div class="bar"><span>WIND</span><i><b id="stb"></b></i></div>
+    <div class="bar"><span>FATIGUE</span><i><b id="ftb"></b></i></div>
     <ul id="cargo"></ul>
   </div>
   <div id="br" class="plq"><div id="wname">COLT REVOLVER</div><div id="ammo"></div><div id="reserve"></div></div>
@@ -121,6 +123,7 @@ body.touch #xh{display:none}
     <div class="keys">
       <div><span>Drive</span><b>W A S D / ARROWS</b></div>
       <div><span>Whip the team</span><b>SHIFT</b></div>
+      <div><span>Rest the team</span><b>STOP (FASTER IN TOWN)</b></div>
       <div><span>Aim / fire</span><b>MOUSE / CLICK</b></div>
       <div><span>Revolver / shotgun</span><b>1 / 2 / Q</b></div>
       <div><span>Reload</span><b>R</b></div>
@@ -521,7 +524,7 @@ function person(M,coat,hat,parent,x,y,z){
 }
 
 /* coach */
-const coach={x:0,z:0,a:0,v:0,y:0,hp:100,st:100,pitch:0,roll:0,phase:0,whipping:false};
+const coach={x:0,z:0,a:0,v:0,y:0,hp:100,st:100,fat:0,fatWarn:0,pitch:0,roll:0,phase:0,whipping:false};
 const coachG=new THREE.Group();scene.add(coachG);
 const wheels=[],teamLegs=[];let guard,gunPivot,lantern,lanternLight,flashLight;
 {
@@ -615,8 +618,8 @@ const RANKS=[[0,'GREENHORN'],[3,'MAIL RIDER'],[8,'JEHU'],[15,'WHIP'],[25,'STAR R
 function rankIdx(){let r=0;RANKS.forEach((x,i)=>{if(deliveries>=x[0])r=i;});return r;}
 const maxHp=()=>100+upg.iron*50, cap=()=>4+upg.sacks*2, spdMul=()=>1+upg.team*0.15;
 const SAVEK='starmail1852-v1';
-function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,gameMin}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;upg=Object.assign(upg,s.upg);kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,gameMin,fat:coach.fat}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;upg=Object.assign(upg,s.upg);kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;coach.fat=s.fat||0;gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -789,7 +792,9 @@ const SHOP=[
   {k:'team',n:'FRESH MORGAN TEAM · +15% SPEED',p:()=>300*(upg.team+1),buy:()=>upg.team++,off:()=>upg.team>=2},
   {k:'iron',n:'IRON-STRAPPED COACH · +50 HP',p:()=>250*(upg.iron+1),buy:()=>{upg.iron++;coach.hp+=50;},off:()=>upg.iron>=2},
   {k:'sacks',n:'EXTRA MAIL SACKS · +2 CARGO',p:()=>200*(upg.sacks+1),buy:()=>upg.sacks++,off:()=>upg.sacks>=2},
-  {k:'oats',n:'OATS FOR THE TEAM · FASTER WIND',p:()=>150,buy:()=>upg.oats++,off:()=>upg.oats>=1},
+  {k:'rest',n:'REST AT THE LIVERY · TAKES 2 HOURS',p:()=>10,buy:()=>{coach.fat=0;coach.st=100;gameMin+=120;toast('THE TEAM IS RESTED','good');},off:()=>coach.fat<1},
+  {k:'relay',n:'SWAP IN A FRESH RELAY TEAM · NO WAIT',p:()=>45,buy:()=>{coach.fat=0;coach.st=100;toast('FRESH HORSES IN THE TRACES','good');},off:()=>coach.fat<1},
+  {k:'oats',n:'OATS FOR THE TEAM · LESS FATIGUE',p:()=>150,buy:()=>upg.oats++,off:()=>upg.oats>=1},
 ];
 function openPO(){
   if(!curTown)return;state='panel';$('po').hidden=false;$('xh').hidden=true;renderPO();setTimeout(()=>$('closePO').focus(),0);save();
@@ -805,7 +810,7 @@ function renderPO(){
   $('jobs').innerHTML=h||'<li><div>NO MORE MAIL TODAY.</div></li>';
   $('sackNote').textContent='MAIL SACKS: '+cargo.length+' / '+cap()+(cargo.length?' · ABOARD: '+cargo.map(c=>c.to.toUpperCase()).join(', '):'');
   let s='';
-  SHOP.forEach((it,i)=>{const off=it.off&&it.off();const p=it.p();s+=`<li><div>${it.n}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':'BOUGHT'):'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||money<p?'disabled':''}>BUY</button></li>`;});
+  SHOP.forEach((it,i)=>{const off=it.off&&it.off();const p=it.p();s+=`<li><div>${it.n}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':(it.k==='rest'||it.k==='relay')?'THE TEAM IS FRESH':'BOUGHT'):'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||money<p?'disabled':''}>BUY</button></li>`;});
   $('shop').innerHTML=s;
 }
 $('po').addEventListener('click',ev=>{
@@ -823,7 +828,7 @@ function wreck(){
   $('wreckText').textContent=`${lost?lost+' sack'+(lost>1?'s':'')+' of mail lost. ':''}A freight wagon hauled you to ${best.name}, and the wheelwright charged $${fee} to set her right.`;
   $('wreck').hidden=false;$('xh').hidden=true;coach._respawn=best;SFX.bad();
 }
-$('wreckBtn').onclick=()=>{const t=coach._respawn;placeCoach(t);coach.hp=maxHp();coach.st=100;enemies.forEach(e=>scene.remove(e.g));enemies.length=0;$('wreck').hidden=true;state='play';if(!document.body.classList.contains('touch'))$('xh').hidden=false;save();};
+$('wreckBtn').onclick=()=>{const t=coach._respawn;placeCoach(t);coach.hp=maxHp();coach.st=100;coach.fat=0;enemies.forEach(e=>scene.remove(e.g));enemies.length=0;$('wreck').hidden=true;state='play';if(!document.body.classList.contains('touch'))$('xh').hidden=false;save();};
 function placeCoach(t){coach.x=t.x;coach.z=t.z;coach.a=t.dirA||0;coach.v=0;camYaw=coach.a;camOff=0;}
 
 /* ---------- input ---------- */
@@ -865,7 +870,7 @@ const isTouch=matchMedia('(pointer: coarse)').matches;
 function swapTo(w){if(w===wcur)return;wcur=w;reloadT=0;fcool=0.25;SFX.reload();}
 function startReload(){const w=W[wcur];if(reloadT>0||w.mag>=w.cap||w.res<=0)return;reloadT=w.rel;reloadW=wcur;SFX.reload();}
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),aimPt=new THREE.Vector3(),tmpV=new THREE.Vector3(),tmpV2=new THREE.Vector3();
-let aimEnemy=null;
+let aimEnemy=null,swayX=0,swayY=0;
 function muzzle(){return new THREE.Vector3(coach.x,coach.y+6.6,coach.z);}
 function enemyC(e,v){return v.set(e.x,H(e.x,e.z)+e.hy,e.z);}
 function raySphere(o,d,c,r){tmpV2.subVectors(c,o);const tca=tmpV2.dot(d);if(tca<0)return -1;const d2=tmpV2.lengthSq()-tca*tca;if(d2>r*r)return -1;return tca-Math.sqrt(r*r-d2);}
@@ -874,10 +879,11 @@ function computeAim(){
   aimEnemy=null;const mz=muzzle();
   if(isTouch){let bd=1e9;for(const e of enemies){if(e.dead)continue;const d=Math.hypot(e.x-coach.x,e.z-coach.z);if(d<W[wcur].range&&d<bd){bd=d;aimEnemy=e;}}
     if(aimEnemy)enemyC(aimEnemy,aimPt);else aimPt.set(coach.x+Math.sin(coach.a)*40,coach.y+3,coach.z+Math.cos(coach.a)*40);return;}
-  ndc.set(mouse.x/innerWidth*2-1,-(mouse.y/innerHeight)*2+1);ray.setFromCamera(ndc,camera);
+  const sw=REDUCED?0:Math.max(0,coach.fat-30)*0.9,tt=performance.now()/1000;swayX=Math.sin(tt*1.7)*sw+Math.sin(tt*3.1)*sw*0.4;swayY=Math.cos(tt*1.3)*sw*0.7;
+  ndc.set((mouse.x+swayX)/innerWidth*2-1,-((mouse.y+swayY)/innerHeight)*2+1);ray.setFromCamera(ndc,camera);
   const o=ray.ray.origin,d=ray.ray.direction;let bt=1e9;
   for(const e of enemies){if(e.dead)continue;const t=raySphere(o,d,enemyC(e,tmpV),e.r*1.25);if(t>0&&t<bt){bt=t;aimEnemy=e;}}
-  if(!aimEnemy){let bp=38;for(const e of enemies){if(e.dead)continue;enemyC(e,tmpV);if(tmpV.distanceTo(mz)>W[wcur].range*1.1)continue;const pz=tmpV.clone().project(camera);if(pz.z>1)continue;const sx=(pz.x+1)/2*innerWidth,sy=(1-pz.y)/2*innerHeight;const pd=Math.hypot(sx-mouse.x,sy-mouse.y);if(pd<bp){bp=pd;aimEnemy=e;}}}
+  if(!aimEnemy){let bp=38;for(const e of enemies){if(e.dead)continue;enemyC(e,tmpV);if(tmpV.distanceTo(mz)>W[wcur].range*1.1)continue;const pz=tmpV.clone().project(camera);if(pz.z>1)continue;const sx=(pz.x+1)/2*innerWidth,sy=(1-pz.y)/2*innerHeight;const pd=Math.hypot(sx-mouse.x,sy-mouse.y);if(pd<bp-coach.fat*0.25){bp=pd;aimEnemy=e;}}}
   if(aimEnemy){enemyC(aimEnemy,aimPt);return;}
   const th=terrainHit(o,d,700,4);if(th>0)aimPt.copy(o).addScaledVector(d,th);else aimPt.copy(o).addScaledVector(d,500);
 }
@@ -895,8 +901,8 @@ function fireNow(){
   if(w.mag<=0){SFX.empty();fcool=0.3;startReload();return;}
   w.mag--;fcool=w.rate;
   const o=muzzle();const dir=aimPt.clone().sub(o).normalize();
-  if(wcur==='revolver'){const j=0.006+Math.abs(coach.v)*0.0004;dir.x+=(R()-0.5)*j*2;dir.y+=(R()-0.5)*j*2;dir.z+=(R()-0.5)*j*2;dir.normalize();shoot(o,dir,w.range,34);SFX.revolver();}
-  else{for(let k=0;k<9;k++){const d=dir.clone();d.x+=(R()-0.5)*0.16;d.y+=(R()-0.5)*0.1;d.z+=(R()-0.5)*0.16;d.normalize();shoot(o,d,w.range,13);}SFX.shotgun();if(!REDUCED)shake=Math.min(1,shake+0.25);}
+  if(wcur==='revolver'){const j=0.006+Math.abs(coach.v)*0.0004+coach.fat*coach.fat*0.0000075;dir.x+=(R()-0.5)*j*2;dir.y+=(R()-0.5)*j*2;dir.z+=(R()-0.5)*j*2;dir.normalize();shoot(o,dir,w.range,34);SFX.revolver();}
+  else{for(let k=0;k<9;k++){const d=dir.clone();const sp=1+coach.fat/80;d.x+=(R()-0.5)*0.16*sp;d.y+=(R()-0.5)*0.1*sp;d.z+=(R()-0.5)*0.16*sp;d.normalize();shoot(o,d,w.range,13);}SFX.shotgun();if(!REDUCED)shake=Math.min(1,shake+0.25);}
   flashLight.position.copy(o).addScaledVector(dir,2);flashLight.intensity=4;
   puff(o.x+dir.x*2,o.y+dir.y*2,o.z+dir.z*2,0xdddddd,wcur==='shotgun'?8:4,2,2,0.6,-1);
   if(w.mag===0)startReload();
@@ -917,15 +923,16 @@ function updCoach(dt){
   if(K.w||K.arrowup||TC.gas)thr=1;if(K.s||K.arrowdown||TC.brake)thr=-1;
   if(K.a||K.arrowleft||TC.left)steer+=1;if(K.d||K.arrowright||TC.right)steer-=1;
   const wantWhip=(K.shift||TC.whip)&&thr>0;
-  const whip=wantWhip&&coach.st>2;
-  if(whip){coach.st-=24*dt;if(!coach.whipping)SFX.whip();}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6))*dt);
+  const whip=wantWhip&&coach.st>2&&coach.fat<92;
+  const fatMul=1-0.5*sstep(25,100,coach.fat); // tired team runs slower
+  if(whip){coach.st-=24*dt;if(!coach.whipping)SFX.whip();}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6)*(1-coach.fat/160))*dt);
   coach.whipping=whip;
   const onRoad=RD(coach.x,coach.z)<9||!!curTown;const rv=Math.abs(coach.x-riverX(coach.z));
-  const onDeck=deckAt(coach.x,coach.z)>-999;let terr=onRoad?1:0.68;if(rv<16)terr=0.35;
+  const onDeck=deckAt(coach.x,coach.z)>-999;let terr=onRoad?1:0.5;if(rv<16)terr=0.35;
   if(!onDeck&&inCreek(coach.x,coach.z)){terr=0.4;if(Math.abs(coach.v)>3&&R()<0.5)puff(coach.x,H(coach.x,coach.z)+1.6,coach.z,0xbfe0ff,2,4,4,0.6,12);}
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);
   const slope=(G(coach.x+fx*4,coach.z+fz*4)-G(coach.x-fx*4,coach.z-fz*4))/8;
-  const vmax=40*spdMul()*terr*(whip?1.4:1)*clamp(1-slope*0.9,0.45,1.25);
+  const vmax=40*spdMul()*terr*fatMul*(whip?1.4:1)*clamp(1-slope*0.9,0.45,1.25);
   if(thr>0)coach.v+=clamp(vmax-coach.v,-14*dt,13*dt);
   else if(thr<0){if(coach.v>0.5)coach.v-=34*dt;else coach.v=Math.max(-7,coach.v-9*dt);}
   else{coach.v-=Math.sign(coach.v)*Math.min(Math.abs(coach.v),(5+Math.abs(coach.v)*0.18)*dt);}
@@ -933,6 +940,15 @@ function updCoach(dt){
   const tr=1.55*(0.3+0.7*Math.min(1,Math.abs(coach.v)/10));
   coach.a+=steer*tr*dt*(coach.v<-0.1?-1:1);
   coach.x+=fx*coach.v*dt;coach.z+=fz*coach.v*dt;
+  const moved=Math.abs(coach.v)*dt;
+  if(Math.abs(coach.v)>1){
+    const night=dayF<0.4?1.3:1;
+    coach.fat+=moved*0.011*(onRoad?1:1.9)*(whip?2.5:1)*(1+Math.max(0,slope)*3)*night*(upg.oats?0.75:1);
+  }else if(coach.fat>0){coach.fat-=(curTown?6:1.6)*dt;}
+  coach.fat=clamp(coach.fat,0,100);
+  if(coach.fat>=60&&coach.fatWarn<1){coach.fatWarn=1;toast('THE TEAM IS TIRING. YOUR AIM IS SLIPPING','bad');}
+  if(coach.fat>=88&&coach.fatWarn<2){coach.fatWarn=2;toast('THE TEAM IS BLOWN! STOP AND REST THEM','bad');SFX.bad();}
+  if(coach.fat<40)coach.fatWarn=0;
   // collisions: body + team
   let hitAny=false;
   for(const[off,r]of[[1,3.4],[8.6,2.3]]){const px=coach.x+Math.sin(coach.a)*off,pz=coach.z+Math.cos(coach.a)*off;const c=collide(px,pz,r);if(c.hit){coach.x+=c.ox;coach.z+=c.oz;hitAny=true;}}
@@ -968,7 +984,7 @@ function updTowns(dt){
     curTown=t;
   }
   sinceTown+=dt;
-  let h='';if(curTown)h=Math.abs(coach.v)<9?(isTouch?'TAP POST · ':'[E] ')+curTown.name.toUpperCase()+' POST OFFICE':'SLOW DOWN TO VISIT THE POST OFFICE';
+  let h='';if(!curTown&&Math.abs(coach.v)<1&&coach.fat>1)h='RESTING THE TEAM… '+Math.round(coach.fat)+'%';if(curTown)h=Math.abs(coach.v)<9?(isTouch?'TAP POST · ':'[E] ')+curTown.name.toUpperCase()+' POST OFFICE':'SLOW DOWN TO VISIT THE POST OFFICE';
   if(h!==hintTxt){hintTxt=h;$('hint').hidden=!h;$('hint').textContent=h;}
   TOWNS.forEach(tw=>{if(tw.star)tw.star.position.y=tw.h+(tw.star.userData.by||(tw.star.userData.by=tw.star.position.y-tw.h))+Math.sin(performance.now()/400+tw.i)*0.6;});
   const tgt=cargo.length?TB[cargo[0].to]:null;
@@ -1018,7 +1034,7 @@ function updHUD(){
   setT($('clock'),'DAY '+(Math.floor(gameMin/1440)+1)+' · '+fmtTime(gameMin)+(dayF<0.4?' · NIGHT':''));
   setT($('bounty'),bounty?'WANTED: '+bounty.got+'/'+bounty.need+' HOLLISTERS':'');
   $('hpb').style.width=clamp(coach.hp/maxHp(),0,1)*100+'%';$('hpb').style.background=coach.hp/maxHp()<0.3?'var(--blood)':'var(--sage)';
-  $('stb').style.width=coach.st+'%';
+  $('stb').style.width=coach.st+'%';$('ftb').style.width=coach.fat+'%';$('ftb').style.background=coach.fat>85?'var(--blood)':coach.fat>60?'var(--brass)':'var(--dim)';
   const w=W[wcur];setT($('wname'),reloadT>0?'RELOADING…':w.name);
   const key=wcur+w.mag+'/'+w.cap;if(txtCache.get('ammo')!==key){txtCache.set('ammo',key);let h='';for(let i=0;i<w.cap;i++)h+=`<i class="${wcur==='revolver'?'rd':'sh'}${i<w.mag?'':' e'}"></i>`;$('ammo').innerHTML=h;}
   setT($('reserve'),'RESERVE '+w.res+' · '+(wcur==='revolver'?'SHELLS '+W.shotgun.res:'CARTRIDGES '+W.revolver.res));
@@ -1027,7 +1043,7 @@ function updHUD(){
   const tgt=cargo.length?TB[cargo[0].to]:null;
   if(tgt){const ang=Math.atan2(tgt.x-coach.x,tgt.z-coach.z);const rel=angDiff(camYaw,ang);$('arrow').style.transform='rotate('+(-rel)+'rad)';setT($('tgt'),tgt.name.toUpperCase()+' · '+(Math.hypot(tgt.x-coach.x,tgt.z-coach.z)*MI).toFixed(1)+' MI');}
   else{$('arrow').style.transform='rotate(0rad)';setT($('tgt'),curTown?'PICK UP MAIL AT THE STAR':'NO MAIL ABOARD');}
-  $('xh').classList.toggle('on',!!aimEnemy);
+  $('xh').classList.toggle('on',!!aimEnemy);if(!isTouch){$('xh').style.transform='translate('+swayX.toFixed(1)+'px,'+swayY.toFixed(1)+'px)';}
   if(hpFlash>0){hpFlash-=0.016;$('flash').style.opacity=Math.max(0,hpFlash*0.5);}
   if(frame%3===0)drawMini();
 }
