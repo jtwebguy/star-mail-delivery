@@ -117,7 +117,7 @@ body.touch #xh{display:none}
 <div id="title" class="screen">
   <div class="card plq" style="padding:22px">
     <h1>STAR MAIL DELIVERY<small>GOLD COUNTRY · 1852</small></h1>
-    <p class="tag">The U.S. Mail runs on Star Routes now, and the contract is yours. Drive the coach between twenty camps of the Mother Lode, carry letters, papers and gold dust, and ride shotgun against road agents, wolf packs and grizzlies.</p>
+    <p class="tag">The U.S. Mail runs on Star Routes now, and the contract is yours. Drive the coach between twenty-five camps of the Mother Lode, carry letters, papers and gold dust, and ride shotgun against road agents, wolf packs and grizzlies.</p>
     <div class="keys">
       <div><span>Drive</span><b>W A S D / ARROWS</b></div>
       <div><span>Whip the team</span><b>SHIFT</b></div>
@@ -172,7 +172,8 @@ function turnTo(a,b,m){return a+clamp(angDiff(a,b),-m,m);}
 let SEED=1852;function rnd(){SEED=(SEED*16807)%2147483647;return(SEED-1)/2147483646;}
 const R=Math.random;
 const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const MI=0.043; // miles per world unit
+const SC=2; // world scale: towns sit twice as far apart
+const MI=0.043/SC; // miles per world unit
 
 /* ---------- noise ---------- */
 function hash2(x,z){let h=(Math.imul(x|0,374761393)+Math.imul(z|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296;}
@@ -180,7 +181,7 @@ function vnoise(x,z){const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;con
 function fbm(x,z,o){let s=0,a=0.5,f=1,n=0;for(let i=0;i<o;i++){s+=vnoise(x*f+i*17.3,z*f-i*9.1)*a;n+=a;a*=0.5;f*=2.03;}return s/n;}
 
 /* ---------- geography (real lat/lon, squashed) ---------- */
-const LON0=-120.93,LAT0=38.77,SXs=1248,SZs=1600;
+const LON0=-120.93,LAT0=38.77,SXs=1248*SC,SZs=1600*SC;
 const TOWNS=[
  ['Sacramento',38.58,-121.49,'River port where the Argonauts step off the steamers. Every Star Route starts here.'],
  ['Auburn',38.90,-121.07,'Gold turned up in Auburn Ravine in the spring of \'48. The road forks north and east.'],
@@ -202,17 +203,23 @@ const TOWNS=[
  ['Mokelumne Hill',38.30,-120.70,'Diggings so rich that claims are staked sixteen feet square.'],
  ['San Andreas',38.20,-120.68,'Settled by Mexican miners in \'48 on the Calaveras.'],
  ['Angels Camp',38.07,-120.54,'Henry Angel\'s trading post on Angels Creek.'],
+ ['Shingle Springs',38.66,-120.93,'Way station on the Placerville road, named for the shingle mill by the spring.'],
+ ['Michigan Bluff',39.04,-120.74,'Perched on a bluff above the Middle Fork. Long climb, good diggings.'],
+ ['Camptonville',39.45,-121.05,'Stopping place on the trail up to the Yuba camps.'],
+ ['Ione',38.35,-120.93,'Valley trading town at the foot of the hills. Miners call it Bed Bug.'],
+ ['Murphys',38.14,-120.46,'The Murphy brothers struck it rich here in \'48.'],
 ].map(([name,lat,lon,blurb],i)=>({i,name,lat,lon,blurb,x:(lon-LON0)*SXs,z:(LAT0-lat)*SZs}));
 const TB={};TOWNS.forEach(t=>TB[t.name]=t);
-const EDGES=[['Sacramento','Auburn'],['Sacramento','Mormon Island'],['Mormon Island','Placerville'],['Sacramento','Jackson'],['Auburn','Grass Valley'],['Grass Valley','Nevada City'],['Nevada City','Downieville'],['Auburn','Coloma'],['Coloma','Placerville'],['Placerville','Jackson'],['Columbia','Sonora'],
+const EDGES=[['Sacramento','Auburn'],['Sacramento','Mormon Island'],['Mormon Island','Shingle Springs'],['Shingle Springs','Placerville'],['Sacramento','Ione'],['Ione','Jackson'],['Auburn','Grass Valley'],['Grass Valley','Nevada City'],['Nevada City','Downieville'],['Auburn','Coloma'],['Coloma','Placerville'],['Placerville','Jackson'],['Columbia','Sonora'],
  ['Coloma','Georgetown'],['Georgetown','Forest Hill'],['Forest Hill','Auburn'],['Grass Valley','Rough and Ready'],['Rough and Ready','French Corral'],['French Corral','Nevada City'],['Downieville','Sierra City'],
- ['Jackson','Volcano'],['Volcano','Placerville'],['Jackson','Mokelumne Hill'],['Mokelumne Hill','San Andreas'],['San Andreas','Angels Camp'],['Angels Camp','Columbia']];
+ ['Jackson','Volcano'],['Volcano','Placerville'],['Jackson','Mokelumne Hill'],['Mokelumne Hill','San Andreas'],['San Andreas','Angels Camp'],['Angels Camp','Murphys'],['Murphys','Columbia'],['Angels Camp','Columbia'],
+ ['Forest Hill','Michigan Bluff'],['French Corral','Camptonville'],['Camptonville','Downieville']];
 
-const CELL=10,X0=-850,Z0=-1450,XW=1700,ZW=2900,NX=XW/CELL+1,NZ=ZW/CELL+1;
+const CELL=10,X0=-850*SC,Z0=-1450*SC,XW=1700*SC,ZW=2900*SC,NX=XW/CELL+1,NZ=ZW/CELL+1;
 const heights=new Float32Array(NX*NZ),roadD=new Float32Array(NX*NZ);
 
-function trendT(x,z){return clamp((x+720)/1450+(-z)/5200,0,1);}
-function riverX(z){return -772+Math.sin(z/230)*22+Math.sin(z/71+1)*6;}
+function trendT(x,z){return clamp((x+720*SC)/(1450*SC)+(-z)/(5200*SC),0,1);}
+function riverX(z){return -772*SC+Math.sin(z/(230*SC))*22*SC+Math.sin(z/71+1)*6;}
 function smoothH(x,z){const t=trendT(x,z);return 3+110*Math.pow(t,1.5)+(vnoise(x/420+3,z/420-7)-0.5)*30*t;}
 function roughH(x,z){const t=trendT(x,z);const amp=2+48*Math.pow(t,1.1);const n=(fbm(x/170,z/170,4)-0.5)*2*amp;const r=1-Math.abs(fbm(x/260+11,z/260+5,3)*2-1);return smoothH(x,z)+n+r*r*34*t;}
 
@@ -296,8 +303,8 @@ const vcol=new Float32Array(NX*NZ*3);
   for(let iz=0;iz<NZ-1;iz++)for(let ix=0;ix<NX-1;ix++){const i=iz*NX+ix;idx[p++]=i;idx[p++]=i+NX;idx[p++]=i+1;idx[p++]=i+1;idx[p++]=i+NX;idx[p++]=i+NX+1;}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(vcol,3));g.setIndex(new THREE.BufferAttribute(idx,1));g.computeVertexNormals();
   scene.add(new THREE.Mesh(g,new THREE.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:0,specular:0x000000})));
-  const wg=new THREE.PlaneGeometry(170,ZW);wg.rotateX(-Math.PI/2);
-  const water=new THREE.Mesh(wg,new THREE.MeshLambertMaterial({color:0x3a6ea5,transparent:true,opacity:0.88}));water.position.set(-772,-0.8,0);scene.add(water);
+  const wg=new THREE.PlaneGeometry(170*SC,ZW);wg.rotateX(-Math.PI/2);
+  const water=new THREE.Mesh(wg,new THREE.MeshLambertMaterial({color:0x3a6ea5,transparent:true,opacity:0.88}));water.position.set(-772*SC,-0.8,0);scene.add(water);
 }
 
 /* ---------- obstacles grid ---------- */
@@ -325,13 +332,13 @@ function collide(px,pz,r){
 const mines=[];
 {
   const pines=[],oaks=[],rocks=[];
-  for(let k=0;k<30000&&pines.length<4200;k++){
+  for(let k=0;k<110000&&pines.length<13000;k++){
     const x=X0+20+rnd()*(XW-40),z=Z0+20+rnd()*(ZW-40);
     if(RD(x,z)<14||Math.abs(x-riverX(z))<32||nearTown(x,z,80))continue;
     const h=H(x,z);if(h>168)continue;const t=trendT(x,z);const den=fbm(x/140,z/140,3);
     if(t>0.28&&den>0.55-0.12*t)pines.push([x,h,z,0.7+rnd()*0.7]);
-    else if(t<0.4&&den>0.42&&rnd()<0.05&&oaks.length<520)oaks.push([x,h,z,0.8+rnd()*0.6]);
-    else if(t>0.25&&rnd()<0.025&&rocks.length<700)rocks.push([x,h,z,1+rnd()*3]);
+    else if(t<0.4&&den>0.42&&rnd()<0.05&&oaks.length<1600)oaks.push([x,h,z,0.8+rnd()*0.6]);
+    else if(t>0.25&&rnd()<0.025&&rocks.length<2200)rocks.push([x,h,z,1+rnd()*3]);
   }
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),p=new THREE.Vector3(),e=new THREE.Euler();
   function inst(geo,mat,arr,fn){const im=new THREE.InstancedMesh(geo,mat,arr.length);arr.forEach((a,i)=>{fn(a,p,s,e);q.setFromEuler(e);m4.compose(p,q,s);im.setMatrixAt(i,m4);});im.instanceMatrix.needsUpdate=true;scene.add(im);return im;}
@@ -347,7 +354,7 @@ const mines=[];
 
   // mine headframes in the hills
   const wood=lam(0x6b4a2c),dark=lam(0x2a2018),tail=lam(0x8c7a62);
-  for(let k=0;k<800&&mines.length<24;k++){
+  for(let k=0;k<2000&&mines.length<40;k++){
     const tw=TOWNS[1+Math.floor(rnd()*(TOWNS.length-1))];const ang=rnd()*Math.PI*2,d=90+rnd()*130;
     const x=tw.x+Math.sin(ang)*d,z=tw.z+Math.cos(ang)*d;
     if(x<X0+30||x>X0+XW-30||z<Z0+30||z>Z0+ZW-30||RD(x,z)<22||nearTown(x,z,80)||mines.some(m=>Math.hypot(m.x-x,m.z-z)<80))continue;
@@ -623,7 +630,7 @@ function updEnemies(dt){
     else if(e.type==='robber'){
       const slow=coach.v<5;const ang=coach.a+e.slot;const Rr=slow?5:14+e.slotR;
       tx=coach.x+Math.sin(ang)*Rr;tz=coach.z+Math.cos(ang)*Rr;const dd=Math.hypot(tx-e.x,tz-e.z);
-      spd=dd>18?35:Math.min(35,Math.max(coach.v+dd*0.9,5));
+      spd=dd>18?40:Math.min(40,Math.max(coach.v+dd*0.9,5));
       e.cool-=dt;
       if(d<60&&e.cool<=0){
         e.cool=1.5+R()*1.6;const from=new THREE.Vector3(e.x,H(e.x,e.z)+4.6,e.z);
@@ -640,7 +647,7 @@ function updEnemies(dt){
         SFX.bad();
       }
     }else if(e.type==='wolf'){
-      tx=coach.x+fx*8+Math.sin(e.slot)*3;tz=coach.z+fz*8+Math.cos(e.slot)*3;spd=27;
+      tx=coach.x+fx*8+Math.sin(e.slot)*3;tz=coach.z+fz*8+Math.cos(e.slot)*3;spd=31;
       e.bite-=dt;if(Math.hypot(tx-e.x,tz-e.z)<4.5&&e.bite<=0){e.bite=0.8;hurt(3);coach.v*=0.96;}
     }else{
       if(d<120){tx=coach.x+fx*5;tz=coach.z+fz*5;spd=19;e.bite-=dt;if(Math.hypot(tx-e.x,tz-e.z)<6&&e.bite<=0){e.bite=1.4;hurt(13);coach.v*=0.55;SFX.roar();}}
@@ -669,7 +676,7 @@ function placeNugget(n){
     n.x=x;n.z=z;n.y=H(x,z)+1.3;n.m.position.set(x,n.y,z);return;
   }
 }
-for(let i=0;i<45;i++){const n={m:new THREE.Mesh(nugGeo,nugMat),x:0,z:0,y:0};scene.add(n.m);nuggets.push(n);placeNugget(n);}
+for(let i=0;i<90;i++){const n={m:new THREE.Mesh(nugGeo,nugMat),x:0,z:0,y:0};scene.add(n.m);nuggets.push(n);placeNugget(n);}
 function updNuggets(dt,t){
   for(const n of nuggets){
     n.m.rotation.y+=dt*2;n.m.position.y=n.y+Math.sin(t*3+n.x)*0.3;
@@ -687,8 +694,8 @@ function genJobs(t){
     let dest;do{dest=TOWNS[(R()*TOWNS.length)|0];}while(dest===t);
     let r=R()*tot,ty=MAILT[0];for(const m of MAILT){r-=m.w;if(r<=0){ty=m;break;}}
     const dist=Math.hypot(dest.x-t.x,dest.z-t.z)*1.22;
-    const pay=Math.round((dist*0.11+18)*ty.m*(1+rankIdx()*0.06)/5)*5;
-    const travel=dist/24*3;const due=travel*(ty.fast?1.25:1.8)+45;
+    const pay=Math.round((dist*0.11/SC+18)*ty.m*(1+rankIdx()*0.06)/5)*5;
+    const travel=dist/28*3;const due=travel*(ty.fast?1.25:1.8)+45;
     list.push({to:dest.name,type:ty.n,gold:!!ty.gold,pay,miles:Math.round(dist*MI),due,taken:false});
   }
   return list;
@@ -845,7 +852,7 @@ function updCoach(dt){
   let terr=onRoad?1:0.68;if(rv<16)terr=0.35;
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);
   const slope=(H(coach.x+fx*4,coach.z+fz*4)-H(coach.x-fx*4,coach.z-fz*4))/8;
-  const vmax=30*spdMul()*terr*(whip?1.4:1)*clamp(1-slope*0.9,0.45,1.25);
+  const vmax=36*spdMul()*terr*(whip?1.4:1)*clamp(1-slope*0.9,0.45,1.25);
   if(thr>0)coach.v+=clamp(vmax-coach.v,-14*dt,13*dt);
   else if(thr<0){if(coach.v>0.5)coach.v-=34*dt;else coach.v=Math.max(-7,coach.v-9*dt);}
   else{coach.v-=Math.sign(coach.v)*Math.min(Math.abs(coach.v),(5+Math.abs(coach.v)*0.18)*dt);}

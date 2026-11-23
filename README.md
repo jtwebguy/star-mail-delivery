@@ -2,7 +2,7 @@
 
 An 8-bit, third-person stagecoach game set in California's Gold Country in 1852, built with Three.js in a single HTML file.
 
-Drive the U.S. Mail coach between 20 real Mother Lode camps, from Sacramento and Coloma to Downieville, Sierra City and Sonora. Carry letters, newspapers, parcels, registered mail and gold dust, and ride shotgun against road agents, wolf packs and grizzlies with a Colt revolver and a double-barrel coach gun.
+Drive the U.S. Mail coach between 25 real Mother Lode camps, from Sacramento and Coloma to Downieville, Sierra City and Sonora. Carry letters, newspapers, parcels, registered mail and gold dust, and ride shotgun against road agents, wolf packs and grizzlies with a Colt revolver and a double-barrel coach gun.
 
 ## Play
 
