@@ -705,7 +705,7 @@ function updEnemies(dt){
     else if(e.type==='robber'){
       const slow=coach.v<5;const ang=coach.a+e.slot;const Rr=slow?5:14+e.slotR;
       tx=coach.x+Math.sin(ang)*Rr;tz=coach.z+Math.cos(ang)*Rr;const dd=Math.hypot(tx-e.x,tz-e.z);
-      spd=dd>18?44:Math.min(44,Math.max(coach.v+dd*0.9,5));
+      spd=dd>18?37:Math.min(37,Math.max(coach.v+dd*0.9,5));
       e.cool-=dt;
       if(d<60&&e.cool<=0){
         e.cool=1.5+R()*1.6;const from=new THREE.Vector3(e.x,H(e.x,e.z)+4.6,e.z);
@@ -722,7 +722,7 @@ function updEnemies(dt){
         SFX.bad();
       }
     }else if(e.type==='wolf'){
-      tx=coach.x+fx*8+Math.sin(e.slot)*3;tz=coach.z+fz*8+Math.cos(e.slot)*3;spd=34;
+      tx=coach.x+fx*8+Math.sin(e.slot)*3;tz=coach.z+fz*8+Math.cos(e.slot)*3;spd=30;
       e.bite-=dt;if(Math.hypot(tx-e.x,tz-e.z)<4.5&&e.bite<=0){e.bite=0.8;hurt(3);coach.v*=0.96;}
     }else{
       if(d<120){tx=coach.x+fx*5;tz=coach.z+fz*5;spd=19;e.bite-=dt;if(Math.hypot(tx-e.x,tz-e.z)<6&&e.bite<=0){e.bite=1.4;hurt(13);coach.v*=0.55;SFX.roar();}}
@@ -770,7 +770,7 @@ function genJobs(t){
     let r=R()*tot,ty=MAILT[0];for(const m of MAILT){r-=m.w;if(r<=0){ty=m;break;}}
     const dist=Math.hypot(dest.x-t.x,dest.z-t.z)*1.22;
     const pay=Math.round((dist*0.11/SCA+18)*ty.m*(1+rankIdx()*0.06)/5)*5;
-    const travel=dist/31*3;const due=travel*(ty.fast?1.25:1.8)+45;
+    const travel=dist/23*3;const due=travel*(ty.fast?1.25:1.8)+45;
     list.push({to:dest.name,type:ty.n,gold:!!ty.gold,pay,miles:Math.round(dist*MI),due,taken:false});
   }
   return list;
@@ -925,14 +925,14 @@ function updCoach(dt){
   const wantWhip=(K.shift||TC.whip)&&thr>0;
   const whip=wantWhip&&coach.st>2&&coach.fat<92;
   const fatMul=1-0.5*sstep(25,100,coach.fat); // tired team runs slower
-  if(whip){coach.st-=24*dt;if(!coach.whipping)SFX.whip();}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6)*(1-coach.fat/160))*dt);
+  if(whip){coach.st-=11*dt;if(!coach.whipping)SFX.whip();}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6)*(1-coach.fat/160))*dt);
   coach.whipping=whip;
   const onRoad=RD(coach.x,coach.z)<9||!!curTown;const rv=Math.abs(coach.x-riverX(coach.z));
   const onDeck=deckAt(coach.x,coach.z)>-999;let terr=onRoad?1:0.5;if(rv<16)terr=0.35;
   if(!onDeck&&inCreek(coach.x,coach.z)){terr=0.4;if(Math.abs(coach.v)>3&&R()<0.5)puff(coach.x,H(coach.x,coach.z)+1.6,coach.z,0xbfe0ff,2,4,4,0.6,12);}
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);
   const slope=(G(coach.x+fx*4,coach.z+fz*4)-G(coach.x-fx*4,coach.z-fz*4))/8;
-  const vmax=40*spdMul()*terr*fatMul*(whip?1.4:1)*clamp(1-slope*0.9,0.45,1.25);
+  const vmax=28*spdMul()*terr*fatMul*(whip?40/28:1)*clamp(1-slope*0.9,0.45,1.25);
   if(thr>0)coach.v+=clamp(vmax-coach.v,-14*dt,13*dt);
   else if(thr<0){if(coach.v>0.5)coach.v-=34*dt;else coach.v=Math.max(-7,coach.v-9*dt);}
   else{coach.v-=Math.sign(coach.v)*Math.min(Math.abs(coach.v),(5+Math.abs(coach.v)*0.18)*dt);}
