@@ -36,5 +36,14 @@ Touch controls appear on phones and tablets.
 - Fatigue: the crew and team tire with distance (faster off-road, uphill, at night or when whipping). A tired team runs slower and your shots spread and sway. Stop to rest, or pay the livery or a fresh relay team at any post office
 - Off-road travel is much slower than staying on the road
 - Day/night cycle, coach lantern, chiptune music and synthesized sound effects
-- Store upgrades (faster team, iron-strapped coach, extra mail sacks, oats) and driver ranks
+- Coach progression: start with a 2-horse mud wagon. Each driver rank unlocks a better coach to buy at any post office:
+
+  | Coach | Horses | Cruise / whip speed | Mail sacks | HP | Unlock |
+  | --- | --- | --- | --- | --- | --- |
+  | Mud wagon | 2 | 20 / 29 | 3 | 80 | Start |
+  | Celerity wagon | 4 | 24 / 34 | 4 | 100 | Mail Rider rank + $250 |
+  | Concord coach | 6 | 28 / 40 | 6 | 140 | Jehu rank + $600 |
+  | Treasure coach (iron-plated) | 6 | 30 / 43 | 8 | 180 | Whip rank + $1,200 |
+
+- Store: ammunition, wheelwright repairs, livery rest, fresh relay teams and oats
 - Progress saved in the browser

@@ -99,7 +99,7 @@ body.touch #xh{display:none}
 <canvas id="gl"></canvas>
 <div id="flash"></div>
 <div id="hud" hidden>
-  <div id="tl" class="plq"><div id="money">$0</div><div id="rank">GREENHORN</div><div id="clock">DAY 1 07:00</div><div id="bounty"></div></div>
+  <div id="tl" class="plq"><div id="money">$0</div><div id="rank">GREENHORN</div><div id="coachName" style="color:var(--paper)"></div><div id="clock">DAY 1 07:00</div><div id="bounty"></div></div>
   <div id="compass" class="plq"><div id="arrow"></div><div id="tgt">NO MAIL ABOARD</div></div>
   <canvas id="mini" width="150" height="199"></canvas>
   <div id="bl" class="plq">
@@ -588,19 +588,25 @@ function person(M,coat,hat,parent,x,y,z){
 /* coach */
 const coach={x:0,z:0,a:0,v:0,y:0,hp:100,st:100,fat:0,fatWarn:0,pitch:0,roll:0,phase:0,whipping:false};
 const coachG=new THREE.Group();scene.add(coachG);
-const wheels=[],teamLegs=[];let guard,gunPivot,lantern,lanternLight,flashLight;
+const wheels=[],teamLegs=[],horsePairs=[];let guard,bodyG,ironG,canvasTop,poleM,gunPivot,lantern,lanternLight,flashLight;
 {
   const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');
   x.fillStyle='#7a1f17';x.fillRect(0,0,128,64);x.fillStyle='#e8b43a';x.fillRect(0,0,128,4);x.fillRect(0,60,128,4);x.fillRect(0,0,4,64);x.fillRect(124,0,4,64);
   x.fillStyle='#1c2430';x.fillRect(40,8,48,20);x.font='11px "Press Start 2P", monospace';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#e8b43a';x.fillText('U.S. MAIL',64,45);
   const side=new THREE.MeshLambertMaterial({map:nearest(new THREE.CanvasTexture(c))});const red=lam(0x7a1f17);
-  const body=new THREE.Mesh(new THREE.BoxGeometry(3.0,3.2,5.4),[side,side,lam(0x3a1a12),red,red,red]);body.position.set(0,3.4,0);coachG.add(body);
-  box(2.6,0.5,6.2,lam(0x2a1a10),0,1.6,0.4,coachG);
-  box(3.3,0.25,5.7,lam(0x1a120c),0,5.1,0,coachG);
-  box(2.2,0.9,1.6,lam(0x6b4a2c),0,5.6,-1.6,coachG);box(1.6,0.7,1.2,lam(0x8a6a3a),0.2,5.5,0.3,coachG);
-  box(2.8,0.4,1.4,lam(0x3a1a12),0,4.6,3.2,coachG);box(2.8,1.2,0.3,lam(0x3a1a12),0,4.2,3.9,coachG);
-  box(2.4,1.2,1.4,lam(0x3a2a1e),0,3.4,-3.3,coachG); // boot
-  box(0.2,0.2,6.5,lam(0x4a3322),0,1.8,6.4,coachG);
+  bodyG=new THREE.Group();coachG.add(bodyG);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(3.0,3.2,5.4),[side,side,lam(0x3a1a12),red,red,red]);body.position.set(0,3.4,0);bodyG.add(body);
+  box(2.6,0.5,6.2,lam(0x2a1a10),0,1.6,0.4,bodyG);
+  box(3.3,0.25,5.7,lam(0x1a120c),0,5.1,0,bodyG);
+  box(2.2,0.9,1.6,lam(0x6b4a2c),0,5.6,-1.6,bodyG);box(1.6,0.7,1.2,lam(0x8a6a3a),0.2,5.5,0.3,bodyG);
+  box(2.8,0.4,1.4,lam(0x3a1a12),0,4.6,3.2,bodyG);box(2.8,1.2,0.3,lam(0x3a1a12),0,4.2,3.9,bodyG);
+  box(2.4,1.2,1.4,lam(0x3a2a1e),0,3.4,-3.3,bodyG); // boot
+  canvasTop=new THREE.Group();bodyG.add(canvasTop); // mud wagon: canvas roof over open sides
+  box(3.3,0.5,5.8,lam(0xcdbb92),0,5.35,0,canvasTop);for(const z of[-2.6,0,2.6])box(3.4,0.12,0.15,lam(0x6b4a2c),0,5.62,z,canvasTop);
+  ironG=new THREE.Group();bodyG.add(ironG); // treasure coach: iron plates and rivets
+  for(const sx of[-1.56,1.56]){box(0.12,1.0,5.0,lam(0x3c4248),sx,2.4,0,ironG);for(const z of[-2,-1,0,1,2])box(0.14,0.18,0.18,lam(0x9aa2a8),sx*1.01,2.75,z,ironG);}
+  box(3.2,0.15,5.6,lam(0x3c4248),0,1.9,0,ironG);
+  poleM=box(0.2,0.2,6.5,lam(0x4a3322),0,1.8,6.4,coachG);
   const wc=document.createElement('canvas');wc.width=32;wc.height=32;const w=wc.getContext('2d');w.fillStyle='#d9a521';w.fillRect(0,0,32,32);w.strokeStyle='#3a2212';w.lineWidth=2;
   for(let i=0;i<6;i++){const a=i*Math.PI/6;w.beginPath();w.moveTo(16-Math.cos(a)*15,16-Math.sin(a)*15);w.lineTo(16+Math.cos(a)*15,16+Math.sin(a)*15);w.stroke();}
   w.lineWidth=3;w.beginPath();w.arc(16,16,14,0,7);w.stroke();w.fillStyle='#3a2212';w.fillRect(13,13,6,6);
@@ -615,7 +621,8 @@ const wheels=[],teamLegs=[];let guard,gunPivot,lantern,lanternLight,flashLight;
   lanternLight=new THREE.PointLight(0xffc070,0,70,1.5);lanternLight.position.set(0,6,7);coachG.add(lanternLight);
   flashLight=new THREE.PointLight(0xffe0a0,0,40,2);scene.add(flashLight);
   const cols=[[0x7a4a2a,0x2a1a10],[0x5a3a22,0x1a120c],[0x8a5a32,0x3a2a1e],[0x3a2a1e,0x1a120c]];let k=0;
-  for(const z of[7.6,11.0])for(const x of[-0.75,0.75]){const h=makeHorse(lam,cols[k][0],cols[k][1]);k++;h.g.position.set(x,0,z);coachG.add(h.g);teamLegs.push(h.legs);}
+  cols.push([0x6b4a2c,0x2a1a10],[0x9a6a3a,0x3a2a1e]);
+  for(const z of[7.6,11.0,14.4]){const pair=new THREE.Group();coachG.add(pair);horsePairs.push(pair);for(const x of[-0.75,0.75]){const h=makeHorse(lam,cols[k][0],cols[k][1]);k++;h.g.position.set(x,0,z);pair.add(h.g);teamLegs.push(h.legs);}}
 }
 
 /* ---------- particles ---------- */
@@ -672,16 +679,32 @@ function music(){
 
 /* ---------- game state ---------- */
 let state='title',gameMin=7*60,playTime=0,sinceTown=0,camYaw=0,camOff=0,camDist=26,shake=0,dayF=1,spawnT=3;
-let money=40,deliveries=0,cargo=[],upg={team:0,iron:0,sacks:0,oats:0},bounty=null,bountyLevel=0,curTown=null,lastTown=TB.Sacramento,kills=0;
+let money=40,deliveries=0,cargo=[],upg={coach:0,oats:0},bounty=null,bountyLevel=0,curTown=null,lastTown=TB.Sacramento,kills=0;
 const W={revolver:{name:'COLT REVOLVER',mag:6,cap:6,res:30,rate:0.3,rel:1.6,range:150},shotgun:{name:'COACH GUN',mag:2,cap:2,res:10,rate:0.32,rel:1.4,range:55}};
 let wcur='revolver',fcool=0,reloadT=0,reloadW=null;
 const enemies=[],nuggets=[];
 const RANKS=[[0,'GREENHORN'],[3,'MAIL RIDER'],[8,'JEHU'],[15,'WHIP'],[25,'STAR ROUTE DRIVER'],[40,'LEGEND OF THE LODE']];
 function rankIdx(){let r=0;RANKS.forEach((x,i)=>{if(deliveries>=x[0])r=i;});return r;}
-const maxHp=()=>100+upg.iron*50, cap=()=>4+upg.sacks*2, spdMul=()=>1+upg.team*0.15;
+const COACHES=[ // rank index required, then bought at a post office
+  {n:'MUD WAGON',horses:2,cruise:20,whip:29,sacks:3,hp:80,rank:0,price:0},
+  {n:'CELERITY WAGON',horses:4,cruise:24,whip:34,sacks:4,hp:100,rank:1,price:250},
+  {n:'CONCORD COACH',horses:6,cruise:28,whip:40,sacks:6,hp:140,rank:2,price:600},
+  {n:'TREASURE COACH',horses:6,cruise:30,whip:43,sacks:8,hp:180,rank:3,price:1200},
+];
+const CT=()=>COACHES[clamp(upg.coach|0,0,COACHES.length-1)];
+const maxHp=()=>CT().hp, cap=()=>CT().sacks;
+const robberTop=()=>CT().whip-3, wolfTop=()=>Math.max(20,CT().whip-10);
+function applyCoachTier(){
+  const t=upg.coach|0,pairs=CT().horses/2;
+  horsePairs.forEach((p,i)=>p.visible=i<pairs);
+  poleM.scale.z=3+pairs*3.5;poleM.position.z=4.2+pairs*1.7;
+  canvasTop.visible=t===0;ironG.visible=t===3;
+  bodyG.scale.set(t===0?0.92:1,t===0?0.88:1,t===0?0.88:t===1?0.94:1);
+  coach.hp=Math.min(coach.hp,maxHp());
+}
 const SAVEK='starmail1852-v1';
 function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0)}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;upg=Object.assign(upg,s.upg);kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -767,7 +790,7 @@ function updEnemies(dt){
     else if(e.type==='robber'){
       const slow=coach.v<5;const ang=coach.a+e.slot;const Rr=slow?5:14+e.slotR;
       tx=coach.x+Math.sin(ang)*Rr;tz=coach.z+Math.cos(ang)*Rr;const dd=Math.hypot(tx-e.x,tz-e.z);
-      spd=dd>18?37:Math.min(37,Math.max(coach.v+dd*0.9,5));
+      spd=dd>18?robberTop():Math.min(robberTop(),Math.max(coach.v+dd*0.9,5));
       e.cool-=dt;
       if(d<60&&e.cool<=0){
         e.cool=1.5+R()*1.6;const from=new THREE.Vector3(e.x,H(e.x,e.z)+4.6,e.z);
@@ -784,7 +807,7 @@ function updEnemies(dt){
         SFX.bad();
       }
     }else if(e.type==='wolf'){
-      tx=coach.x+fx*8+Math.sin(e.slot)*3;tz=coach.z+fz*8+Math.cos(e.slot)*3;spd=30;
+      tx=coach.x+fx*8+Math.sin(e.slot)*3;tz=coach.z+fz*8+Math.cos(e.slot)*3;spd=wolfTop();
       e.bite-=dt;if(Math.hypot(tx-e.x,tz-e.z)<4.5&&e.bite<=0){e.bite=0.8;hurt(3);coach.v*=0.96;}
     }else{
       if(d<120){tx=coach.x+fx*5;tz=coach.z+fz*5;spd=19;e.bite-=dt;if(Math.hypot(tx-e.x,tz-e.z)<6&&e.bite<=0){e.bite=1.4;hurt(13);coach.v*=0.55;SFX.roar();}}
@@ -844,18 +867,19 @@ function deliverAt(t){
     toast((late?'LATE ':'')+c.type+' DELIVERED +$'+pay,late?'info':'good');}
   if(any){SFX.cash();const r=rankIdx();if(r!==t._rankSeen){t._rankSeen=r;}checkRank();save();}
 }
-let lastRank=0;function checkRank(){const r=rankIdx();if(r>lastRank){lastRank=r;toast('PROMOTED: '+RANKS[r][1],'good');}}
+let lastRank=0;function checkRank(){const r=rankIdx();if(r>lastRank){lastRank=r;toast('PROMOTED: '+RANKS[r][1],'good');const c=COACHES[(upg.coach|0)+1];if(c&&c.rank<=r)toast('A '+c.n+' IS FOR SALE AT ANY POST OFFICE','good');}}
 
 /* ---------- post office UI ---------- */
 const SHOP=[
   {k:'cart',n:'.44 CARTRIDGES ×24',p:()=>12,buy:()=>W.revolver.res+=24},
   {k:'shell',n:'BUCKSHOT SHELLS ×10',p:()=>12,buy:()=>W.shotgun.res+=10},
   {k:'fix',n:'WHEELWRIGHT REPAIR',p:()=>Math.ceil((maxHp()-coach.hp)*1.2),buy:()=>coach.hp=maxHp(),off:()=>coach.hp>=maxHp()},
-  {k:'team',n:'FRESH MORGAN TEAM · +15% SPEED',p:()=>300*(upg.team+1),buy:()=>upg.team++,off:()=>upg.team>=2},
-  {k:'iron',n:'IRON-STRAPPED COACH · +50 HP',p:()=>250*(upg.iron+1),buy:()=>{upg.iron++;coach.hp+=50;},off:()=>upg.iron>=2},
-  {k:'sacks',n:'EXTRA MAIL SACKS · +2 CARGO',p:()=>200*(upg.sacks+1),buy:()=>upg.sacks++,off:()=>upg.sacks>=2},
+  {k:'coach',n:()=>{const c=COACHES[(upg.coach|0)+1];return c?'NEW '+c.n+' · '+c.horses+' HORSES<br><span class="muted">SPEED '+c.cruise+'/'+c.whip+' · '+c.sacks+' SACKS · '+c.hp+' HP</span>':'TREASURE COACH · THE FINEST ON THE ROAD';},
+    p:()=>{const c=COACHES[(upg.coach|0)+1];return c?c.price:0;},
+    lock:()=>{const c=COACHES[(upg.coach|0)+1];return c&&rankIdx()<c.rank?'NEEDS '+RANKS[c.rank][1]+' RANK':'';},
+    buy:()=>{upg.coach++;coach.hp=maxHp();applyCoachTier();toast('YOUR NEW '+CT().n+' IS HITCHED UP','good');},off:()=>(upg.coach|0)>=COACHES.length-1},
   {k:'rest',n:'REST AT THE LIVERY · TAKES 2 HOURS',p:()=>10,buy:()=>{coach.fat=0;coach.st=100;gameMin+=120;toast('THE TEAM IS RESTED','good');},off:()=>coach.fat<1},
-  {k:'relay',n:'SWAP IN A FRESH RELAY TEAM · NO WAIT',p:()=>45,buy:()=>{coach.fat=0;coach.st=100;toast('FRESH HORSES IN THE TRACES','good');},off:()=>coach.fat<1},
+  {k:'relay',n:'SWAP IN A FRESH RELAY TEAM · NO WAIT',p:()=>15+CT().horses*10,buy:()=>{coach.fat=0;coach.st=100;toast('FRESH HORSES IN THE TRACES','good');},off:()=>coach.fat<1},
   {k:'oats',n:'OATS FOR THE TEAM · LESS FATIGUE',p:()=>150,buy:()=>upg.oats++,off:()=>upg.oats>=1},
 ];
 function openPO(){
@@ -872,14 +896,14 @@ function renderPO(){
   $('jobs').innerHTML=h||'<li><div>NO MORE MAIL TODAY.</div></li>';
   $('sackNote').textContent='MAIL SACKS: '+cargo.length+' / '+cap()+(cargo.length?' · ABOARD: '+cargo.map(c=>c.to.toUpperCase()).join(', '):'');
   let s='';
-  SHOP.forEach((it,i)=>{const off=it.off&&it.off();const p=it.p();s+=`<li><div>${it.n}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':(it.k==='rest'||it.k==='relay')?'THE TEAM IS FRESH':'BOUGHT'):'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||money<p?'disabled':''}>BUY</button></li>`;});
+  SHOP.forEach((it,i)=>{const off=it.off&&it.off();const lk=!off&&it.lock?it.lock():'';const p=it.p();const nm=typeof it.n==='function'?it.n():it.n;s+=`<li><div>${nm}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':(it.k==='rest'||it.k==='relay')?'THE TEAM IS FRESH':it.k==='coach'?'YOU DRIVE THE BEST':'BOUGHT'):lk?'<span class="warn">'+lk+'</span>':'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||lk||money<p?'disabled':''}>BUY</button></li>`;});
   $('shop').innerHTML=s;
 }
 $('po').addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b)return;
   if(b.dataset.job!==undefined){const j=curTown.jobs[+b.dataset.job];if(cargo.length<cap()&&!j.taken){j.taken=true;cargo.push({to:j.to,type:j.type,gold:j.gold,pay:j.pay,deadline:gameMin+j.due});SFX.coin();}renderPO();}
   if(b.dataset.bounty){bounty={need:5+bountyLevel*2,got:0,reward:150+bountyLevel*100};SFX.coin();renderPO();}
-  if(b.dataset.shop!==undefined){const it=SHOP[+b.dataset.shop];const p=it.p();if(money>=p&&!(it.off&&it.off())){money-=p;it.buy();SFX.cash();save();}renderPO();}
+  if(b.dataset.shop!==undefined){const it=SHOP[+b.dataset.shop];const p=it.p();if(money>=p&&!(it.off&&it.off())&&!(it.lock&&it.lock())){money-=p;it.buy();SFX.cash();save();}renderPO();}
 });
 $('closePO').onclick=closePO;
 
@@ -1013,7 +1037,7 @@ function updCoach(dt){
   if(!onDeck&&inCreek(coach.x,coach.z)){terr=0.4;if(Math.abs(coach.v)>3&&R()<0.5)puff(coach.x,H(coach.x,coach.z)+1.6,coach.z,0xbfe0ff,2,4,4,0.6,12);}
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);
   const slope=(G(coach.x+fx*4,coach.z+fz*4)-G(coach.x-fx*4,coach.z-fz*4))/8;
-  const vmax=28*spdMul()*terr*fatMul*(whip?40/28:1)*clamp(1-slope*0.9,0.45,1.25);
+  const vmax=CT().cruise*terr*fatMul*(whip?CT().whip/CT().cruise:1)*clamp(1-slope*0.9,0.45,1.25);
   if(thr>0)coach.v+=clamp(vmax-coach.v,-14*dt,13*dt);
   else if(thr<0){if(coach.v>0.5)coach.v-=34*dt;else coach.v=Math.max(-7,coach.v-9*dt);}
   else{coach.v-=Math.sign(coach.v)*Math.min(Math.abs(coach.v),(5+Math.abs(coach.v)*0.18)*dt);}
@@ -1032,7 +1056,7 @@ function updCoach(dt){
   if(coach.fat<40)coach.fatWarn=0;
   // collisions: body + team
   let hitAny=false;
-  for(const[off,r]of[[1,3.4],[8.6,2.3]]){const px=coach.x+Math.sin(coach.a)*off,pz=coach.z+Math.cos(coach.a)*off;const c=collide(px,pz,r);if(c.hit){coach.x+=c.ox;coach.z+=c.oz;hitAny=true;}}
+  for(const[off,r]of[[1,3.4],[6+CT().horses*0.9,2.3+CT().horses*0.25]]){const px=coach.x+Math.sin(coach.a)*off,pz=coach.z+Math.cos(coach.a)*off;const c=collide(px,pz,r);if(c.hit){coach.x+=c.ox;coach.z+=c.oz;hitAny=true;}}
   if(hitAny){if(Math.abs(coach.v)>13){hurt(Math.abs(coach.v)*0.18);puff(coach.x+fx*9,coach.y+2,coach.z+fz*9,0x8a6a4a,10,6,4,0.6,10);}coach.v*=Math.abs(coach.v)>13?-0.2:0.6;}
   coach.x=clamp(coach.x,X0+12,X0+XW-12);coach.z=clamp(coach.z,Z0+12,Z0+ZW-12);
   // ground pose
@@ -1138,7 +1162,7 @@ function drawMini(){
   const[x,y]=m2(coach.x,coach.z);mctx.save();mctx.translate(x,y);mctx.rotate(-coach.a+Math.PI);mctx.fillStyle='#fff';mctx.beginPath();mctx.moveTo(0,-5);mctx.lineTo(3.5,4);mctx.lineTo(-3.5,4);mctx.closePath();mctx.fill();mctx.strokeStyle='#000';mctx.stroke();mctx.restore();
 }
 function updHUD(){
-  setT($('money'),'$'+money);setT($('rank'),RANKS[rankIdx()][1]+' · '+deliveries+' RUNS');
+  setT($('money'),'$'+money);setT($('rank'),RANKS[rankIdx()][1]+' · '+deliveries+' RUNS');setT($('coachName'),CT().n+' · '+CT().horses+' HORSES');
   setT($('clock'),'DAY '+(Math.floor(gameMin/1440)+1)+' · '+fmtTime(gameMin)+(dayF<0.4?' · NIGHT':''));
   setT($('bounty'),bounty?'WANTED: '+bounty.got+'/'+bounty.need+' HOLLISTERS':'');
   $('hpb').style.width=clamp(coach.hp/maxHp(),0,1)*100+'%';$('hpb').style.background=coach.hp/maxHp()<0.3?'var(--blood)':'var(--sage)';
@@ -1174,7 +1198,7 @@ function loop(now){
 }
 
 /* ---------- start ---------- */
-const hadSave=load();lastRank=rankIdx();
+const hadSave=load();lastRank=rankIdx();applyCoachTier();
 if(hadSave){$('startBtn').textContent='CONTINUE CONTRACT';$('newBtn').hidden=false;$('saveNote').textContent='$'+money+' · '+deliveries+' RUNS';}
 placeCoach(TB.Sacramento);coach.hp=maxHp();coach.y=H(coach.x,coach.z);
 camera.position.set(coach.x-20,coach.y+20,coach.z-30);
@@ -1185,6 +1209,6 @@ function begin(){
   toast('LOAD MAIL AT THE STAR, THEN HIT THE ROAD','info');
 }
 $('startBtn').onclick=begin;
-$('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}money=40;deliveries=0;upg={team:0,iron:0,sacks:0,oats:0};kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
+$('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}money=40;deliveries=0;upg={coach:0,oats:0};applyCoachTier();kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
 requestAnimationFrame(loop);
 </script>
