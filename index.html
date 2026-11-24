@@ -43,6 +43,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #reserve{color:var(--dim);font-size:8px}
 #hint{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:var(--brass);text-shadow:2px 2px 0 #000;white-space:nowrap;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
+#fixBtn{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);pointer-events:auto;white-space:nowrap}
+body.touch #fixBtn{bottom:calc(236px + env(safe-area-inset-bottom,0px))}
 #toasts{position:fixed;left:50%;top:26%;transform:translateX(-50%);display:grid;gap:6px;justify-items:center;width:min(92vw,560px)}
 .toast{background:#000b;padding:6px 10px;text-align:center;text-shadow:2px 2px 0 #000;animation:tin .25s steps(3)}
 .toast.good{color:var(--brass)}.toast.bad{color:var(--blood)}.toast.info{color:var(--paper)}
@@ -108,6 +110,7 @@ body.touch #xh{display:none}
   </div>
   <div id="br" class="plq"><div id="wname">COLT REVOLVER</div><div id="ammo"></div><div id="reserve"></div></div>
   <div id="hint" hidden></div>
+  <button id="fixBtn" class="btn" hidden></button>
   <div id="toasts"></div>
 </div>
 <div id="xh" hidden></div>
@@ -129,6 +132,7 @@ body.touch #xh{display:none}
       <div><span>Reload</span><b>R</b></div>
       <div><span>Look back</span><b>C / RIGHT-DRAG</b></div>
       <div><span>Post office</span><b>E</b></div>
+      <div><span>Repair a broken bridge</span><b>F</b></div>
       <div><span>Zoom</span><b>WHEEL</b></div>
       <div><span>Music / pause</span><b>M / P</b></div>
     </div>
@@ -328,7 +332,8 @@ const vcol=new Float32Array(NX*NZ*3);
 
 /* ---------- obstacles grid ---------- */
 const OB=new Map();const OBC=30;
-function obAdd(x,z,r){const k=Math.floor(x/OBC)+','+Math.floor(z/OBC);if(!OB.has(k))OB.set(k,[]);OB.get(k).push({x,z,r});}
+function obAdd(x,z,r){const k=Math.floor(x/OBC)+','+Math.floor(z/OBC);if(!OB.has(k))OB.set(k,[]);const o={x,z,r};OB.get(k).push(o);return o;}
+function obClear(list){list.forEach(o=>o.r=-100);}
 const buildings=[];
 function collide(px,pz,r){
   let ox=0,oz=0,hit=false;const cx=Math.floor(px/OBC),cz=Math.floor(pz/OBC);
@@ -445,28 +450,32 @@ const starTex=nearest(new THREE.CanvasTexture(starCanvas()));
   });
 }
 /* ---------- road obstacles: bridges, deadfall logs, rockslides ---------- */
-const logs=[],slides=[];
+const logs=[],slides=[];let buildBridge;
 {
-  const plank=lam(0x7a5434),plank2=lam(0x5a3a22),post=lam(0x3a2a1e),wat=new THREE.MeshLambertMaterial({color:0x4a86b8,transparent:true,opacity:0.85});
+  const plank3=lam(0xb08a5a),plank=lam(0x7a5434),plank2=lam(0x5a3a22),post=lam(0x3a2a1e),wat=new THREE.MeshLambertMaterial({color:0x4a86b8,transparent:true,opacity:0.85});
   const red=lam(0xb8332a),white=lam(0xe8e0c8);
-  bridges.forEach(b=>{
-    const g=new THREE.Group();g.position.set(b.x,b.deckY,b.z);g.rotation.y=b.a;scene.add(g);
-    if(!b.broken){box(8,0.5,22,plank,0,-0.25,0,g);}
+  buildBridge=b=>{
+    if(b.g)scene.remove(b.g);if(b.sign){scene.remove(b.sign);b.sign=null;}if(b.obs)obClear(b.obs);b.obs=[];
+    const g=new THREE.Group();g.position.set(b.x,b.deckY,b.z);g.rotation.y=b.a;scene.add(g);b.g=g;
+    if(!b.broken){box(8,0.5,22,plank,0,-0.25,0,g);if(b.fixed)for(let k=-9;k<=9;k+=3)box(8.1,0.52,1.2,plank3,0,-0.24,k,g);}
     else{box(8,0.5,8,plank,0,-0.25,7,g);box(8,0.5,8,plank,0,-0.25,-7,g);
       const p1=box(3,0.4,6,plank2,1.5,-2.2,2.4,g);p1.rotation.x=0.7;p1.rotation.z=0.2;const p2=box(2.5,0.4,5,plank2,-2,-3,-2,g);p2.rotation.x=-0.9;}
     for(const sx of[-4.2,4.2]){
       if(!b.broken)box(0.3,0.3,22,plank2,sx,1.1,0,g);else{box(0.3,0.3,8,plank2,sx,1.1,7,g);box(0.3,0.3,8,plank2,sx,1.1,-7,g);}
       for(const pz of[-10.5,-3.5,3.5,10.5]){if(b.broken&&Math.abs(pz)<4)continue;box(0.4,1.4,0.4,post,sx,0.5,pz,g);box(0.7,8,0.7,post,sx*0.9,-4,pz,g);}
     }
-    const w=new THREE.Mesh(new THREE.PlaneGeometry(9,110),wat);w.rotation.x=-Math.PI/2;const wg=new THREE.Group();wg.position.set(b.x,b.deckY-6,b.z);wg.rotation.y=b.a+Math.PI/2;wg.add(w);scene.add(wg);
     if(b.broken){
       for(const end of[-12.5,12.5]){
         box(8,0.6,0.4,red,0,1.4,end,g);for(let k=-3;k<=3;k+=2)box(1,0.62,0.42,white,k,1.4,end,g);
         box(0.3,1.6,0.3,post,-3.6,0.6,end,g);box(0.3,1.6,0.3,post,3.6,0.6,end,g);
-        for(let v=-5;v<=5;v+=2){const wx=b.x+b.ux*end+b.uz*v,wz=b.z+b.uz*end-b.ux*v;obAdd(wx,wz,1.3);}
+        for(let v=-5;v<=5;v+=2){const wx=b.x+b.ux*end+b.uz*v,wz=b.z+b.uz*end-b.ux*v;b.obs.push(obAdd(wx,wz,1.3));}
       }
-      const sg=labelSprite('BRIDGE OUT','#ff6a5a',3.4);sg.position.set(b.x,b.deckY+6,b.z);scene.add(sg);
+      const sg=labelSprite('BRIDGE OUT','#ff6a5a',3.4);sg.position.set(b.x,b.deckY+6,b.z);scene.add(sg);b.sign=sg;
     }
+  };
+  bridges.forEach(b=>{
+    buildBridge(b);
+    const w=new THREE.Mesh(new THREE.PlaneGeometry(9,110),wat);w.rotation.x=-Math.PI/2;const wg=new THREE.Group();wg.position.set(b.x,b.deckY-6,b.z);wg.rotation.y=b.a+Math.PI/2;wg.add(w);scene.add(wg);
   });
   // deadfall logs across the road, some with an ambush waiting
   const bark=lam(0x5a3f28),end=lam(0xb08a5a);const lg=new THREE.CylinderGeometry(0.9,1.0,16,7);
@@ -478,11 +487,11 @@ const logs=[],slides=[];
       if(nearTown(x,z,160)||bridges.some(b=>Math.hypot(b.x-x,b.z-z)<90)||logs.some(l=>Math.hypot(l.x-x,l.z-z)<180))continue;
       const a=Math.atan2(bx-ax,bz-az);const px=Math.cos(a),pz=-Math.sin(a);const off=(rnd()-0.5)*4;
       const cx=x+px*off,cz=z+pz*off;const y=H(cx,cz);
-      const g=new THREE.Group();g.position.set(cx,y+0.8,cz);g.rotation.y=a+(rnd()-0.5)*0.4;scene.add(g);
+      const g=new THREE.Group();g.position.set(cx,y+0.8,cz);g.rotation.y=a;scene.add(g);
       const m=new THREE.Mesh(lg,[bark,end,end]);m.rotation.z=Math.PI/2;g.add(m);
       const br=box(0.3,2.4,0.3,bark,2.5,1,0,g);br.rotation.z=-0.6;const br2=box(0.25,1.8,0.25,bark,-4,0.8,0.4,g);br2.rotation.x=0.8;
-      for(let v=-7.5;v<=7.5;v+=1.5){obAdd(cx+px*v,cz+pz*v,1.1);}
-      logs.push({x:cx,z:cz,ambush:rnd()<0.35,sprung:false});
+      const obs=[];for(let v=-7.5;v<=7.5;v+=1.5){obs.push(obAdd(cx+px*v,cz+pz*v,1.1));}
+      logs.push({x:cx,z:cz,y:y+0.8,px,pz,g,obs,hp:90,dead:false,ambush:rnd()<0.35,sprung:false});
     }
   });
   // rockslides on the mountain roads
@@ -618,8 +627,8 @@ const RANKS=[[0,'GREENHORN'],[3,'MAIL RIDER'],[8,'JEHU'],[15,'WHIP'],[25,'STAR R
 function rankIdx(){let r=0;RANKS.forEach((x,i)=>{if(deliveries>=x[0])r=i;});return r;}
 const maxHp=()=>100+upg.iron*50, cap=()=>4+upg.sacks*2, spdMul=()=>1+upg.team*0.15;
 const SAVEK='starmail1852-v1';
-function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,gameMin,fat:coach.fat}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;upg=Object.assign(upg,s.upg);kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;coach.fat=s.fat||0;gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0)}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;upg=Object.assign(upg,s.upg);kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -841,6 +850,7 @@ addEventListener('keydown',e=>{
     if(k==='1')swapTo('revolver');if(k==='2')swapTo('shotgun');if(k==='q')swapTo(wcur==='revolver'?'shotgun':'revolver');
     if(k==='r')startReload();if(k==='e'&&curTown&&Math.abs(coach.v)<9)openPO();
     if(k==='c')camOff=Math.abs(camOff)>1?0:Math.PI;
+    if(k==='f')startRepair();
     if(k==='p'||k==='escape')setPause(true);if(k===' ')mouse.down=true;
   }else if(state==='panel'&&(k==='e'||k==='escape'))closePO();
   else if(state==='paused'&&(k==='p'||k==='escape'))setPause(false);
@@ -886,13 +896,31 @@ function computeAim(){
   if(!aimEnemy){let bp=38;for(const e of enemies){if(e.dead)continue;enemyC(e,tmpV);if(tmpV.distanceTo(mz)>W[wcur].range*1.1)continue;const pz=tmpV.clone().project(camera);if(pz.z>1)continue;const sx=(pz.x+1)/2*innerWidth,sy=(1-pz.y)/2*innerHeight;const pd=Math.hypot(sx-mouse.x,sy-mouse.y);if(pd<bp-coach.fat*0.25){bp=pd;aimEnemy=e;}}}
   if(aimEnemy){enemyC(aimEnemy,aimPt);return;}
   const th=terrainHit(o,d,700,4);if(th>0)aimPt.copy(o).addScaledVector(d,th);else aimPt.copy(o).addScaledVector(d,500);
+  const lh=logRay(o,d,th>0?th:500);if(lh)aimPt.copy(o).addScaledVector(d,lh.t);
+}
+const logC=new THREE.Vector3();
+function logRay(o,d,maxT){ // nearest deadfall log along a ray
+  let best=null,bt=maxT;
+  for(const l of logs){if(l.dead||Math.abs(l.x-o.x)>maxT+10||Math.abs(l.z-o.z)>maxT+10)continue;
+    for(let v=-7;v<=7;v+=1.75){logC.set(l.x+l.px*v,l.y,l.z+l.pz*v);const t=raySphere(o,d,logC,1.2);if(t>0&&t<bt){bt=t;best=l;}}}
+  return best?{l:best,t:bt}:null;
+}
+function damageLog(l,dmg,at){
+  l.hp-=dmg;puff(at.x,at.y,at.z,0xb08a5a,5,6,5,0.6,14);noiseHit(0.08,500,0.25);
+  if(l.hp<=0&&!l.dead){
+    l.dead=true;scene.remove(l.g);obClear(l.obs);
+    for(let v=-7;v<=7;v+=2)puff(l.x+l.px*v,l.y,l.z+l.pz*v,R()<0.5?0x5a3f28:0xb08a5a,6,9,8,1,14);
+    noiseHit(0.5,300,0.7);money+=5;toast('ROAD CLEARED +$5','good');save();
+  }
 }
 function shoot(o,dir,range,dmg,col){
   let best=null,bt=range;
   for(const e of enemies){if(e.dead)continue;const t=raySphere(o,dir,enemyC(e,tmpV),e.r);if(t>0&&t<bt){bt=t;best=e;}}
+  const lh=logRay(o,dir,bt);if(lh){best=null;bt=lh.t;}
   const tt=terrainHit(o,dir,bt,2.5);
   const end=o.clone().addScaledVector(dir,tt>0?tt:bt);
-  if(best&&!(tt>0)){const fall=1-0.5*bt/range;damageEnemy(best,dmg*fall,dir);}
+  if(lh&&!(tt>0)){damageLog(lh.l,dmg,end);}
+  else if(best&&!(tt>0)){const fall=1-0.5*bt/range;damageEnemy(best,dmg*fall,dir);}
   else if(tt>0)puff(end.x,end.y+0.3,end.z,0xb08b5a,4,3,3,0.5,10);
   tracer(o,end,col);
 }
@@ -969,9 +997,36 @@ function updCoach(dt){
 
 /* ---------- towns & time ---------- */
 let hintTxt='';
+const LUMBER=15;const fixPay=()=>80+20*rankIdx();
+let repairB=null,repairT=0,fixTxt='',nearBroken=null;
+function startRepair(){
+  if(!nearBroken||repairB||state!=='play')return;
+  if(money<LUMBER){toast('YOU NEED $'+LUMBER+' FOR LUMBER','bad');SFX.bad();return;}
+  money-=LUMBER;repairB=nearBroken;repairT=0;toast('REPAIRING THE BRIDGE. HOLD STILL','info');
+}
+function finishRepair(b){
+  b.broken=false;b.fixed=true;buildBridge(b);
+  const pay=fixPay();money+=pay;SFX.cash();toast('BRIDGE REPAIRED! COUNTY PAYS $'+pay,'good');
+  for(let k=0;k<20;k++)puff(b.x+(R()-0.5)*8,b.deckY+0.5,b.z+(R()-0.5)*8,0xb08a5a,2,6,6,0.8,12);save();
+}
+function updRepair(dt){
+  nearBroken=null;
+  for(const b of bridges){if(b.broken&&Math.hypot(b.x-coach.x,b.z-coach.z)<38){nearBroken=b;break;}}
+  if(repairB){
+    if(nearBroken!==repairB||Math.abs(coach.v)>3){toast('REPAIR ABANDONED. LUMBER WASTED','bad');repairB=null;}
+    else{repairT+=dt;if(R()<dt*6){noiseHit(0.05,900,0.3,'bandpass');puff(repairB.x+(R()-0.5)*6,repairB.deckY,repairB.z+(R()-0.5)*6,0xb08a5a,2,3,4,0.5,12);}
+      if(repairT>=8){const b=repairB;repairB=null;finishRepair(b);}}
+  }
+  let t='';
+  if(repairB)t='REPAIRING… '+Math.min(99,Math.floor(repairT/8*100))+'%';
+  else if(nearBroken&&Math.abs(coach.v)<3)t=(isTouch?'':'[F] ')+'REPAIR BRIDGE · LUMBER $'+LUMBER+' · COUNTY PAYS $'+fixPay();
+  else if(nearBroken)t='STOP THE COACH TO REPAIR THE BRIDGE';
+  if(t!==fixTxt){fixTxt=t;$('fixBtn').hidden=!t;$('fixBtn').textContent=t;$('fixBtn').disabled=!!repairB||Math.abs(coach.v)>=3;}
+}
+$('fixBtn').addEventListener('click',e=>{e.preventDefault();startRepair();});
 function updObstacles(){
   const now=performance.now();
-  for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK','bad');}}
+  for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');}}
   for(const l of logs){if(l.sprung)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
     if(d<90){l.sprung=true;if(l.ambush&&playTime>15){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');SFX.enemyShot(30);}
       else toast('TREE DOWN ACROSS THE ROAD','info');}}
@@ -1055,7 +1110,7 @@ function loop(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;clock+=dt;frame++;
   if(state==='play'){
     playTime+=dt;gameMin+=dt*3;
-    updCoach(dt);updObstacles();computeAim();updWeapons(dt);updEnemies(dt);updNuggets(dt,clock);updTowns(dt);
+    updCoach(dt);updObstacles();updRepair(dt);computeAim();updWeapons(dt);updEnemies(dt);updNuggets(dt,clock);updTowns(dt);
     spawnT-=dt;if(spawnT<=0){spawnT=2.5;trySpawn();}
     updHUD();music();
   }
