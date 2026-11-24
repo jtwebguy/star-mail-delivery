@@ -506,6 +506,59 @@ const logs=[],slides=[];let buildBridge;
     slides.push({x,z});
   });
 }
+/* ---------- roadside: sporadic split-rail fences and treelines ---------- */
+{
+  const posts=[],rails=[],tlPines=[],tlOaks=[];
+  const clearSpot=(x,z,minRoad)=>!(roadDistAt(x,z)<minRoad||nearTown(x,z,95)||Math.abs(x-riverX(z))<40||bridges.some(b=>Math.abs(b.x-x)<45&&Math.abs(b.z-z)<45&&Math.hypot(b.x-x,b.z-z)<45)||logs.some(l=>Math.abs(l.x-x)<25&&Math.abs(l.z-z)<25));
+  roadLines.forEach(pts=>{
+    const run={fence:[0,0],trees:[0,0]}; // remaining run length per side (left,right)
+    let lastPost=[null,null];
+    for(let i=0;i<pts.length-1;i++){
+      const[ax,az]=pts[i],[bx,bz]=pts[i+1];const L=Math.hypot(bx-ax,bz-az);const ux=(bx-ax)/L,uz=(bz-az)/L,nx=uz,nz=-ux;const ang=Math.atan2(ux,uz);
+      for(let d=0;d<L;d+=6){
+        const cx=ax+ux*d,cz=az+uz*d;
+        for(let side=0;side<2;side++){
+          const sg=side?1:-1;
+          // fences: on/off runs of 30-130 units
+          if(run.fence[side]<=0){lastPost[side]=null;if(rnd()<0.024)run.fence[side]=30+rnd()*110;}
+          if(run.fence[side]>0){
+            run.fence[side]-=6;
+            const x=cx+nx*sg*10.5,z=cz+nz*sg*10.5;
+            if(!clearSpot(x,z,8.5)){run.fence[side]=0;lastPost[side]=null;}
+            else{
+              const y=H(x,z);posts.push([x,y,z,ang]);obAdd(x,z,0.5);
+              const lp=lastPost[side];
+              if(lp&&rnd()>0.08){const mx=(lp[0]+x)/2,mz=(lp[2]+z)/2,my=(lp[1]+y)/2,len=Math.hypot(x-lp[0],z-lp[2]);const ra=Math.atan2(x-lp[0],z-lp[2]);const tilt=Math.atan2(y-lp[1],len);
+                rails.push([mx,my+0.65,mz,ra,len,tilt]);if(rnd()>0.1)rails.push([mx,my+1.25,mz,ra,len,tilt]);obAdd(mx,mz,0.5);}
+              lastPost[side]=[x,y,z];
+            }
+          }
+          // treelines: on/off runs of 50-220 units
+          if(run.trees[side]<=0){if(rnd()<0.013)run.trees[side]=50+rnd()*170;}
+          if(run.trees[side]>0){
+            run.trees[side]-=6;if(rnd()<0.25)continue;
+            const off=17+rnd()*5,x=cx+nx*sg*off+ux*(rnd()-0.5)*3,z=cz+nz*sg*off+uz*(rnd()-0.5)*3;
+            if(!clearSpot(x,z,14))continue;
+            const y=H(x,z),sc=0.75+rnd()*0.5;
+            if(trendT(x,z)>0.3){tlPines.push([x,y,z,sc]);obAdd(x,z,0.9*sc);}else{tlOaks.push([x,y,z,sc]);obAdd(x,z,1.3*sc);}
+          }
+        }
+      }
+    }
+  });
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),sv=new THREE.Vector3(),pv=new THREE.Vector3(),e=new THREE.Euler(0,0,0,'YXZ');
+  function inst(geo,mat,arr,fn){if(!arr.length)return;const im=new THREE.InstancedMesh(geo,mat,arr.length);arr.forEach((a,i)=>{fn(a);q.setFromEuler(e);m4.compose(pv,q,sv);im.setMatrixAt(i,m4);});im.instanceMatrix.needsUpdate=true;scene.add(im);}
+  const bx=new THREE.BoxGeometry(1,1,1),wood=lam(0x8a6a44),wood2=lam(0x6b4f33);
+  inst(bx,wood2,posts,a=>{pv.set(a[0],a[1]+0.75,a[2]);sv.set(0.3,1.7,0.3);e.set(0,a[3],0);});
+  inst(bx,wood,rails,a=>{pv.set(a[0],a[1],a[2]);sv.set(0.18,0.2,a[4]+0.4);e.set(-a[5],a[3],0);});
+  const trunk=new THREE.CylinderGeometry(0.45,0.6,1,5),cone=new THREE.ConeGeometry(1,1,6);
+  inst(trunk,lam(0x5a3a22),tlPines,a=>{pv.set(a[0],a[1]+1.5*a[3],a[2]);sv.set(a[3],3*a[3],a[3]);e.set(0,0,0);});
+  inst(cone,lam(0x2f5a2e),tlPines,a=>{pv.set(a[0],a[1]+5.5*a[3],a[2]);sv.set(3.4*a[3],7*a[3],3.4*a[3]);e.set(0,a[0],0);});
+  inst(cone,lam(0x3d6e36),tlPines,a=>{pv.set(a[0],a[1]+9*a[3],a[2]);sv.set(2.3*a[3],5*a[3],2.3*a[3]);e.set(0,a[2],0);});
+  inst(trunk,lam(0x4a3322),tlOaks,a=>{pv.set(a[0],a[1]+1.6*a[3],a[2]);sv.set(1.4*a[3],3.2*a[3],1.4*a[3]);e.set(0,0,0);});
+  inst(new THREE.IcosahedronGeometry(1,0),lam(0x58702e),tlOaks,a=>{pv.set(a[0],a[1]+5*a[3],a[2]);sv.set(5*a[3],3.4*a[3],5*a[3]);e.set(0,a[0],0);});
+  window._roadside={posts:posts.length,rails:rails.length,pines:tlPines.length,oaks:tlOaks.length};
+}
 function deckAt(x,z){for(const b of bridges){if(Math.abs(x-b.x)>14||Math.abs(z-b.z)>14)continue;const[u,c]=creekLocal(b,x,z);if(Math.abs(c)<4.6&&Math.abs(u)<11.5&&!(b.broken&&Math.abs(u)<3))return b.deckY;}return -999;}
 function inCreek(x,z){for(const b of bridges){if(Math.abs(x-b.x)>70||Math.abs(z-b.z)>70)continue;const[u,c]=creekLocal(b,x,z);if(Math.abs(u)<5&&Math.abs(c)<55)return true;}return false;}
 function G(x,z){return Math.max(H(x,z),deckAt(x,z));}

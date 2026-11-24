@@ -30,6 +30,7 @@ Touch controls appear on phones and tablets.
 
 - Wide terrain map (about 6,100 × 8,100 units) with towns placed from real latitude and longitude, long winding roads, the Sacramento River and Sierra snowfields
 - Road hazards: deadfall logs across the road (some hide a robber ambush), rockslides in the mountains, and creek bridges, some washed out so you must ford the creek
+- Sporadic split-rail fences and treelines along the roads
 - Shoot fallen logs apart to clear the road, and stop at a washed-out bridge to repair it: pay $15 for lumber and the county pays you for the work
 - Mail jobs with deadlines and pay, a wanted-poster bounty, gold nuggets near mine headframes
 - Fatigue: the crew and team tire with distance (faster off-road, uphill, at night or when whipping). A tired team runs slower and your shots spread and sway. Stop to rest, or pay the livery or a fresh relay team at any post office
