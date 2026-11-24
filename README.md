@@ -33,6 +33,7 @@ Touch controls appear on phones and tablets.
 - Road hazards: deadfall logs across the road (some hide a robber ambush), rockslides in the mountains, and creek bridges, some washed out so you must ford the creek
 - Sporadic split-rail fences and treelines along the roads
 - Shoot fallen logs apart to clear the road, and stop at a washed-out bridge to repair it: pay $15 for lumber and the county pays you for the work
+- Escort jobs worth big money: bank money, iron safes (take 2 sacks) and prisoners. Each brings 2 armed deputies (up to 4) who ride beside the coach, shoot threats and stop robbers from looting while they live. The coach runs 10% slower while escorting, and road agents come hunting
 - Mail jobs with deadlines and pay, a wanted-poster bounty, gold nuggets near mine headframes
 - Fatigue: the crew and team tire with distance (faster off-road, uphill, at night or when whipping). A tired team runs slower and your shots spread and sway. Stop to rest, or pay the livery or a fresh relay team at any post office
 - Off-road travel is much slower than staying on the road
@@ -41,10 +42,10 @@ Touch controls appear on phones and tablets.
 
   | Coach | Horses | Cruise / whip speed | Mail sacks | HP | Unlock |
   | --- | --- | --- | --- | --- | --- |
-  | Mud wagon | 2 | 20 / 29 | 3 | 80 | Start |
-  | Celerity wagon | 4 | 24 / 34 | 4 | 100 | Mail Rider rank + $250 |
-  | Concord coach | 6 | 28 / 40 | 6 | 140 | Jehu rank + $600 |
-  | Treasure coach (iron-plated) | 6 | 30 / 43 | 8 | 180 | Whip rank + $1,200 |
+  | Mud wagon | 2 | 20 / 29 | 5 | 80 | Start |
+  | Celerity wagon | 4 | 24 / 34 | 6 | 100 | Mail Rider rank + $250 |
+  | Concord coach | 6 | 28 / 40 | 8 | 140 | Jehu rank + $600 |
+  | Treasure coach (iron-plated) | 6 | 30 / 43 | 10 | 180 | Whip rank + $1,200 |
 
 - Store: ammunition, wheelwright repairs, livery rest, fresh relay teams and oats
 - Progress saved in the browser
