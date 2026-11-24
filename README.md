@@ -19,6 +19,7 @@ Open `index.html` in a browser (it loads Three.js r128 from cdnjs), or turn on G
 | Revolver / shotgun | 1 / 2 / Q |
 | Reload | R |
 | Look back | C / right-drag |
+| Map with town names | N / click the minimap |
 | Post office | E |
 | Repair a broken bridge | F |
 | Zoom | Mouse wheel |
