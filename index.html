@@ -749,7 +749,12 @@ function makeEnemy(type){
   Object.assign(e,{g,mats,legs,x:0,z:0,a:0,v:0,cool:1+Math.random()*2,state:'hunt',phase:Math.random()*6,dead:false,deadT:0,flash:0,slot:0,slotR:0,bite:0});
   scene.add(g);return e;
 }
+// one attacking group at a time: fleeing riders don't count, and each fight is followed by a short breather
+let calmT=0,hadAttack=false;
+const attackActive=()=>enemies.some(e=>!e.dead&&e.state!=='flee');
+function updCalm(dt){const a=attackActive();if(hadAttack&&!a)calmT=20;hadAttack=a;if(calmT>0)calmT-=dt;}
 function spawnGroup(type,n){
+  if(attackActive()||calmT>0)return;
   const base=coach.a+(R()<0.6?Math.PI+(R()-0.5)*1.4:(R()-0.5)*1.3);const dist=155+R()*40;
   const sx=clamp(coach.x+Math.sin(base)*dist,X0+30,X0+XW-30),sz=clamp(coach.z+Math.cos(base)*dist,Z0+30,Z0+ZW-30);
   if(nearTown(sx,sz,120)||Math.abs(sx-riverX(sz))<25)return;
@@ -760,6 +765,7 @@ function spawnGroup(type,n){
   if(type==='bear'){SFX.roar();toast('GRIZZLY!','bad');}
 }
 function trySpawn(){
+  if(attackActive()||calmT>0)return;
   if(playTime<25||sinceTown<6)return;if(nearTown(coach.x,coach.z,130))return;
   if(enemies.filter(e=>!e.dead).length>=9)return;
   const t=trendT(coach.x,coach.z),night=dayF<0.4,onRoad=RD(coach.x,coach.z)<12,gold=cargo.some(c=>c.gold),lvl=rankIdx();const vip=escorting();
@@ -1209,7 +1215,7 @@ function updObstacles(){
   const now=performance.now();
   for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');}}
   for(const l of logs){if(l.sprung)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
-    if(d<90){l.sprung=true;if(l.ambush&&playTime>15){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');SFX.enemyShot(30);}
+    if(d<90){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');SFX.enemyShot(30);}
       else toast('TREE DOWN ACROSS THE ROAD','info');}}
 }
 function updTowns(dt){
@@ -1294,7 +1300,7 @@ function loop(now){
   if(state==='play'){
     playTime+=dt;gameMin+=dt*3;
     updCoach(dt);updObstacles();updRepair(dt);computeAim();updWeapons(dt);updEnemies(dt);updDeputies(dt);updNuggets(dt,clock);updTowns(dt);
-    spawnT-=dt;if(spawnT<=0){spawnT=2.5;trySpawn();}
+    updCalm(dt);spawnT-=dt;if(spawnT<=0){spawnT=2.5;trySpawn();}
     updHUD();music();
   }
   updParticles(dt);updTracers(dt);updSky();
