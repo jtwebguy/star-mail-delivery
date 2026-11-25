@@ -520,9 +520,10 @@ const logs=[],slides=[];let buildBridge;
     const i=1+Math.floor(rnd()*(pts.length-2));const[ax,az]=pts[i-1],[bx,bz]=pts[i];const x=(ax+bx)/2,z=(az+bz)/2;
     if(trendT(x,z)<0.4||nearTown(x,z,160)||bridges.some(b=>Math.hypot(b.x-x,b.z-z)<90)||logs.some(l=>Math.hypot(l.x-x,l.z-z)<60))return;
     const a=Math.atan2(bx-ax,bz-az);const px=Math.cos(a),pz=-Math.sin(a);const side=rnd()<0.5?1:-1;
+    const rocks=[];
     for(let k=0;k<8;k++){const v=side*(-3+rnd()*11),u=(rnd()-0.5)*8,r=1.2+rnd()*2.4;const rx=x+px*v+Math.sin(a)*u,rz=z+pz*v+Math.cos(a)*u;
-      const m=new THREE.Mesh(rk,rnd()<0.5?rm:rm2);m.scale.set(r,r*0.8,r);m.position.set(rx,H(rx,rz)+r*0.4,rz);m.rotation.set(rnd()*3,rnd()*3,0);scene.add(m);obAdd(rx,rz,r*0.9);}
-    slides.push({x,z});
+      const m=new THREE.Mesh(rk,rnd()<0.5?rm:rm2);m.scale.set(r,r*0.8,r);m.position.set(rx,H(rx,rz)+r*0.4,rz);m.rotation.set(rnd()*3,rnd()*3,0);scene.add(m);rocks.push({m,o:obAdd(rx,rz,r*0.9),x:rx,z:rz,r,gone:false});}
+    slides.push({x,z,rocks});
   });
 }
 /* ---------- roadside: sporadic split-rail fences and treelines ---------- */
@@ -662,7 +663,7 @@ function updTracers(dt){for(const t of tracers){if(t.life>0){t.life-=dt;t.l.mate
 
 /* ---------- audio ---------- */
 const AU={ctx:null,musicOn:true,nextT:0,step:0};
-function auInit(){if(AU.ctx)return;try{const C=window.AudioContext||window.webkitAudioContext;const c=new C();AU.ctx=c;AU.master=c.createGain();AU.master.gain.value=0.5;AU.master.connect(c.destination);AU.sfx=c.createGain();AU.sfx.connect(AU.master);AU.mus=c.createGain();AU.mus.gain.value=0.14;AU.mus.connect(AU.master);const len=c.sampleRate;const b=c.createBuffer(1,len,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;AU.noise=b;}catch(e){AU.ctx=null;}}
+function auInit(){if(AU.ctx)return;try{const C=window.AudioContext||window.webkitAudioContext;const c=new C();AU.ctx=c;AU.master=c.createGain();AU.master.gain.value=0.5;AU.master.connect(c.destination);AU.sfx=c.createGain();AU.sfx.connect(AU.master);AU.mus=c.createGain();AU.mus.gain.value=0.24;AU.mus.connect(AU.master);const len=c.sampleRate;const b=c.createBuffer(1,len,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;AU.noise=b;}catch(e){AU.ctx=null;}}
 function noiseHit(dur,freq,vol,type,delay){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime+(delay||0);const s=c.createBufferSource();s.buffer=AU.noise;s.loop=true;const f=c.createBiquadFilter();f.type=type||'lowpass';f.frequency.value=freq;const g=c.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f);f.connect(g);g.connect(AU.sfx);s.start(t,Math.random()*0.5);s.stop(t+dur+0.05);}
 function tone(freq,dur,type,vol,delay,slide,dest){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime+(delay||0);const o=c.createOscillator();o.type=type||'square';o.frequency.setValueAtTime(freq,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,freq*slide),t+dur);const g=c.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(dest||AU.sfx);o.start(t);o.stop(t+dur+0.05);}
 const SFX={
@@ -723,8 +724,8 @@ function applyCoachTier(){
   coach.hp=Math.min(coach.hp,maxHp());
 }
 const SAVEK='starmail1852-v1';
-function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0)}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0),rocksGone:slides.flatMap((sl,i)=>sl.rocks.map((k,j)=>k.gone?i+':'+j:null)).filter(Boolean)}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.rocksGone||[]).forEach(id=>{const[i,j]=id.split(':').map(Number);const k=slides[i]&&slides[i].rocks[j];if(k&&!k.gone){k.gone=true;scene.remove(k.m);obClear([k.o]);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -1254,6 +1255,11 @@ function explode(p){
   const dc=Math.hypot(coach.x-p.x,coach.z-p.z);if(dc<12){hurt(26*(1-dc/12));say('d','x',{cd:3,text:pick(['Warn me next time!','You tryin\' to kill us?!'])});}
   else if(dc<120)sayLater(0.9,'d','x',{cd:10,chance:0.6,text:pick(['Hoo-ee!','That\'ll wake the whole county.','Remind me never to cross you.'])});
   for(const l of logs){if(l.dead)continue;if(Math.hypot(l.x-p.x,l.z-p.z)<r+7)damageLog(l,999,new THREE.Vector3(l.x,l.y,l.z));}
+  let rocksBlown=0;
+  for(const sl of slides){if(Math.abs(sl.x-p.x)>45||Math.abs(sl.z-p.z)>45)continue;
+    for(const k of sl.rocks){if(k.gone||Math.hypot(k.x-p.x,k.z-p.z)>r+k.r)continue;k.gone=true;rocksBlown++;scene.remove(k.m);obClear([k.o]);
+      puff(k.x,H(k.x,k.z)+k.r*0.5,k.z,0x8a8072,14,14,12,1.2,20);puff(k.x,H(k.x,k.z)+1,k.z,0x6e675e,8,8,6,1.6,-1);}}
+  if(rocksBlown){toast('ROCKSLIDE BLASTED CLEAR','good');sayLater(1.4,'g','x',{cd:6,text:pick(['Road\'s open!','That\'s how you clear a road.'])});save();}
 }
 function updSticks(dt){
   for(let i=sticks.length-1;i>=0;i--){
@@ -1369,9 +1375,11 @@ function updRepair(dt){
 $('fixBtn').addEventListener('click',e=>{e.preventDefault();startRepair();});
 function updObstacles(){
   const now=performance.now();
-  for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');say('d','bridge',{cd:10});}}
-  for(const l of logs){if(l.sprung)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
-    if(d<90){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');say(enemies[enemies.length-1],'robber_yell',{cd:0,text:'Surprise!'});sayLater(1.2,'d','raid_robber',{cd:0});SFX.enemyShot(30);}
+  const fx=Math.sin(coach.a),fz=Math.cos(coach.a);const ahead=(x,z,d)=>((x-coach.x)*fx+(z-coach.z)*fz)>0.75*d;
+  for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&ahead(b.x,b.z,d)&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');say('d','bridge',{cd:10});}}
+  for(const l of logs){if(l.sprung||l.dead)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
+    if(d<30&&!ahead(l.x,l.z,d)){l.sprung=true;continue;} // passed it or it's off to the side: stay quiet
+    if(d<90&&ahead(l.x,l.z,d)&&roadDistAt(l.x,l.z)<9&&RD(coach.x,coach.z)<14){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');say(enemies[enemies.length-1],'robber_yell',{cd:0,text:'Surprise!'});sayLater(1.2,'d','raid_robber',{cd:0});SFX.enemyShot(30);}
       else{toast('TREE DOWN ACROSS THE ROAD','info');say('d','log',{cd:8});if(l.ambush)sayLater(1.8,'g','ambush_hint',{cd:20,chance:0.5});}}}
 }
 function updTowns(dt){
