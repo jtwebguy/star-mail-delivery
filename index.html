@@ -109,7 +109,7 @@ body.touch #xh{display:none}
 <canvas id="gl"></canvas>
 <div id="flash"></div>
 <div id="hud" hidden>
-  <div id="tl" class="plq"><div id="money">$0</div><div id="rank">GREENHORN</div><div id="coachName" style="color:var(--paper)"></div><div id="clock">DAY 1 07:00</div><div id="bounty"></div></div>
+  <div id="tl" class="plq"><div id="money">$0</div><div id="rank">GREENHORN</div><div id="coachName" style="color:var(--paper)"></div><div id="clock">DAY 1 07:00</div><div id="bounty"></div><div id="income" style="color:var(--sage)"></div></div>
   <div id="compass" class="plq"><div id="arrow"></div><div id="tgt">NO MAIL ABOARD</div></div>
   <canvas id="mini" width="150" height="199"></canvas>
   <div id="bl" class="plq">
@@ -159,6 +159,7 @@ body.touch #xh{display:none}
     <div class="cols">
       <section><h3>MAIL FOR THE ROAD</h3><ul class="list" id="jobs"></ul><p class="muted" id="sackNote"></p></section>
       <section><h3>GENERAL STORE</h3><ul class="list" id="shop"></ul></section>
+      <section><h3>INVESTMENTS</h3><ul class="list" id="invest"></ul><p class="muted" id="investNote"></p></section>
     </div>
     <div class="row"><button class="btn" id="closePO">HIT THE TRAIL [E]</button></div>
   </div>
@@ -176,7 +177,7 @@ body.touch #xh{display:none}
   <div class="plq" style="display:grid;gap:10px;justify-items:center;padding:12px;max-width:100%">
     <div class="row" style="justify-content:space-between;width:100%"><h2>GOLD COUNTRY · STAR ROUTES</h2><button class="btn sm" id="closeMap">CLOSE [N]</button></div>
     <canvas id="bigc" style="image-rendering:pixelated;max-width:100%;height:auto;display:block;background:var(--wood)"></canvas>
-    <div class="row muted" style="justify-content:center;gap:16px"><span>▲ YOU</span><span style="color:var(--brass)">■ MAIL DESTINATION</span><span style="color:var(--blood)">■ BRIDGE OUT</span><span style="color:#6aa8e0">■ BRIDGE</span></div>
+    <div class="row muted" style="justify-content:center;gap:16px"><span>▲ YOU</span><span style="color:var(--brass)">■ MAIL DESTINATION</span><span style="color:var(--sage)">$ YOUR BUSINESS</span><span style="color:var(--blood)">■ BRIDGE OUT</span><span style="color:#6aa8e0">■ BRIDGE</span></div>
   </div>
 </div>
 <div id="pause" class="screen" hidden>
@@ -724,8 +725,8 @@ function applyCoachTier(){
   coach.hp=Math.min(coach.hp,maxHp());
 }
 const SAVEK='starmail1852-v1';
-function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0),rocksGone:slides.flatMap((sl,i)=>sl.rocks.map((k,j)=>k.gone?i+':'+j:null)).filter(Boolean)}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.rocksGone||[]).forEach(id=>{const[i,j]=id.split(':').map(Number);const k=slides[i]&&slides[i].rocks[j];if(k&&!k.gone){k.gone=true;scene.remove(k.m);obClear([k.o]);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,inv,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0),rocksGone:slides.flatMap((sl,i)=>sl.rocks.map((k,j)=>k.gone?i+':'+j:null)).filter(Boolean)}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;inv=s.inv||{};coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.rocksGone||[]).forEach(id=>{const[i,j]=id.split(':').map(Number);const k=slides[i]&&slides[i].rocks[j];if(k&&!k.gone){k.gone=true;scene.remove(k.m);obClear([k.o]);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -1080,6 +1081,40 @@ function openPO(){
   if(!curTown)return;state='panel';$('po').hidden=false;$('xh').hidden=true;renderPO();setTimeout(()=>$('closePO').focus(),0);save();
 }
 function closePO(){$('po').hidden=true;state='play';if(!document.body.classList.contains('touch'))$('xh').hidden=false;}
+/* ---------- investments: buy into a town business, collect its earnings when you visit ---------- */
+const BIZ={'Sacramento':['RIVER LANDING',450],'Auburn':['LIVERY STABLE',300],'Grass Valley':['QUARTZ MILL',400],'Nevada City':['ASSAY OFFICE',350],'Downieville':['MINERS\' HOTEL',300],
+  'Coloma':['SAWMILL',300],'Placerville':['HANGTOWN HOTEL',350],'Jackson':['GENERAL STORE',300],'Columbia':['EXPRESS OFFICE',400],'Sonora':['SALOON',350],
+  'Mormon Island':['RIVER FERRY',250],'Georgetown':['MERCANTILE',250],'Forest Hill':['TRADING POST',250],'Rough and Ready':['BLACKSMITH',250],'French Corral':['DITCH COMPANY',300],
+  'Sierra City':['MULE PACKERS',300],'Volcano':['BREWERY',300],'Mokelumne Hill':['HOTEL',300],'San Andreas':['BAKERY',250],'Angels Camp':['SALOON',300],
+  'Shingle Springs':['SHINGLE MILL',250],'Michigan Bluff':['MINING SUPPLY',300],'Camptonville':['STAGE STOP',250],'Ione':['FLOUR MILL',300],'Murphys':['HOTEL',300]};
+const INV_COST=[1,2,4],INV_INC=[0.2,0.45,1.0]; // stake price and daily income as multiples of the base price
+const TILL_DAYS=2; // earnings pile up for at most two game days
+let inv={}; // town -> {lvl, last}
+const bizOf=t=>BIZ[t.name]||['GENERAL STORE',300];
+const incomeOf=name=>{const i=inv[name];return i&&i.lvl?Math.round(BIZ[name][1]*INV_INC[i.lvl-1]):0;};
+function totalIncome(){return Object.keys(inv).reduce((a,n)=>a+incomeOf(n),0);}
+function tillOf(name){const i=inv[name];if(!i||!i.lvl)return 0;return Math.floor(Math.min(TILL_DAYS,(gameMin-i.last)/1440)*incomeOf(name));}
+function collectTill(t,quiet){
+  const amt=tillOf(t.name);if(amt<=0)return 0;money+=amt;inv[t.name].last=gameMin;
+  if(!quiet){toast('COLLECTED $'+amt+' FROM THE '+bizOf(t)[0],'good');SFX.cash();say('d','x',{cd:20,chance:0.5,text:pick(['Business is good.','Money in the bank!','That\'ll buy some oats.'])});}
+  save();return amt;
+}
+function renderInvest(){
+  const t=curTown;const[bn,base]=bizOf(t);const i=inv[t.name]||{lvl:0};
+  let h=`<li><div><em>${bn}</em> · ${t.name.toUpperCase()}<br>`;
+  if(i.lvl){h+=`STAKE ${i.lvl}/3 · EARNS $${incomeOf(t.name)}/DAY`;}else h+='NO STAKE YET';
+  if(i.lvl<3){const nx=Math.round(base*INV_INC[i.lvl]);h+=`<br><span class="muted">${i.lvl?'EXPAND':'BUY IN'}: $${base*INV_COST[i.lvl]} · EARNS $${nx}/DAY</span></div><button class="btn sm" data-inv="1" ${money<base*INV_COST[i.lvl]?'disabled':''}>${i.lvl?'EXPAND':'BUY IN'}</button></li>`;}
+  else h+='<br><span class="muted">FULLY OWNED</span></div><span></span></li>';
+  const others=Object.keys(inv).filter(n=>inv[n].lvl&&n!==t.name);
+  others.forEach(n=>{h+=`<li><div>${BIZ[n][0]} · ${n.toUpperCase()}<br><span class="muted">$${incomeOf(n)}/DAY · TILL $${tillOf(n)}</span></div><span></span></li>`;});
+  $('invest').innerHTML=h;
+  const tot=totalIncome();$('investNote').textContent=tot?'TOTAL $'+tot+'/DAY. EARNINGS WAIT IN EACH TOWN (UP TO '+TILL_DAYS+' DAYS) UNTIL YOU ARRIVE.':'EACH STAKE EARNS EVERY GAME DAY. COLLECT IT WHEN YOU VISIT THE TOWN.';
+}
+function buyStake(){
+  const t=curTown;const[bn,base]=bizOf(t);const i=inv[t.name]||(inv[t.name]={lvl:0,last:gameMin});if(i.lvl>=3)return;
+  const cost=base*INV_COST[i.lvl];if(money<cost)return;
+  if(i.lvl)collectTill(t,true);money-=cost;i.lvl++;i.last=gameMin;SFX.cash();toast((i.lvl===1?'YOU BOUGHT INTO THE ':'YOU EXPANDED THE ')+bn,'good');save();
+}
 function renderPO(){
   const t=curTown;$('poName').textContent=t.name.toUpperCase()+' POST OFFICE';$('poBlurb').textContent=t.blurb;$('poMoney').textContent='$'+money;
   if(!t.jobs)t.jobs=genJobs(t);
@@ -1092,10 +1127,12 @@ function renderPO(){
   let s='';
   SHOP.forEach((it,i)=>{const off=it.off&&it.off();const lk=!off&&it.lock?it.lock():'';const p=it.p();const nm=typeof it.n==='function'?it.n():it.n;s+=`<li><div>${nm}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':(it.k==='rest'||it.k==='relay')?'THE TEAM IS FRESH':it.k==='coach'?'YOU DRIVE THE BEST':it.k==='dyn'?'YOU CARRY 3, THE MOST':'BOUGHT'):lk?'<span class="warn">'+lk+'</span>':'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||lk||money<p?'disabled':''}>BUY</button></li>`;});
   $('shop').innerHTML=s;
+  renderInvest();
 }
 $('po').addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b)return;
   if(b.dataset.job!==undefined){const j=curTown.jobs[+b.dataset.job];if(slotsUsed()+j.slots<=cap()&&!j.taken){j.taken=true;const c={id:++cargoId,to:j.to,type:j.type,gold:j.gold,escort:j.escort,slots:j.slots,prisoner:j.prisoner,pay:j.pay,deadline:gameMin+j.due};cargo.push(c);SFX.coin();if(c.escort)hireDeputies(c);}renderPO();}
+  if(b.dataset.inv){buyStake();renderPO();}
   if(b.dataset.bounty){bounty={need:5+bountyLevel*2,got:0,reward:150+bountyLevel*100};SFX.coin();renderPO();}
   if(b.dataset.shop!==undefined){const it=SHOP[+b.dataset.shop];const p=it.p();if(money>=p&&!(it.off&&it.off())&&!(it.lock&&it.lock())){money-=p;it.buy();SFX.cash();save();}renderPO();}
 });
@@ -1155,7 +1192,7 @@ function drawBigMap(){
   const dest=new Set(cargo.map(c=>c.to));
   const placed=[];const hit=(r)=>r.x<2||r.y<2||r.x+r.w>w-2||r.y+r.h>h-2||placed.some(q=>r.x<q.x+q.w&&r.x+r.w>q.x&&r.y<q.y+q.h&&r.y+r.h>q.y);
   TOWNS.forEach(t=>{const[x,y]=P(t.x,t.z);placed.push({x:x-5,y:y-5,w:10,h:10});});
-  TOWNS.forEach(t=>{const[x,y]=P(t.x,t.z);const isD=dest.has(t.name);
+  TOWNS.forEach(t=>{const[x,y]=P(t.x,t.z);const isD=dest.has(t.name);if(inv[t.name]&&inv[t.name].lvl){bctx.fillStyle='#8fbf5f';bctx.fillText('$',x-4,y-12);}
     bctx.fillStyle='#000';bctx.fillRect(x-5,y-5,10,10);bctx.fillStyle=isD?'#ffd24a':'#f3e2b3';bctx.fillRect(x-4,y-4,8,8);
     const label=t.name.toUpperCase();const tw=bctx.measureText(label).width,bw=tw+6,bh=fs+6;
     const opts=[[x+8,y-bh/2],[x-8-bw,y-bh/2],[x-bw/2,y-8-bh],[x-bw/2,y+8],[x+8,y-bh-4],[x+8,y+4],[x-8-bw,y-bh-4],[x-8-bw,y+4],[x-bw/2,y-12-bh*2],[x-bw/2,y+12+bh]];
@@ -1304,7 +1341,7 @@ function updCoach(dt){
   const fatMul=1-0.5*sstep(25,100,coach.fat); // tired team runs slower
   if(whip){coach.st-=11*dt;if(!coach.whipping){SFX.whip();say('d','whip',{cd:6,chance:0.45});}}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6)*(1-coach.fat/160))*dt);
   coach.whipping=whip;
-  const onRoad=RD(coach.x,coach.z)<9||!!curTown;const rv=Math.abs(coach.x-riverX(coach.z));
+  /* road counts 50% wider than before */ const onRoad=roadDistAt(coach.x,coach.z)<13.5||!!curTown;const rv=Math.abs(coach.x-riverX(coach.z));
   const onDeck=deckAt(coach.x,coach.z)>-999;let terr=onRoad?1:0.5;if(rv<16)terr=0.35;
   if(!onDeck&&inCreek(coach.x,coach.z)){terr=0.4;if(Math.abs(coach.v)>3&&R()<0.5)puff(coach.x,H(coach.x,coach.z)+1.6,coach.z,0xbfe0ff,2,4,4,0.6,12);}
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);
@@ -1385,7 +1422,7 @@ function updObstacles(){
 function updTowns(dt){
   const t=nearTown(coach.x,coach.z,60);
   if(t!==curTown){
-    if(t){toast('WELCOME TO '+t.name.toUpperCase(),'info');curTown=t;say('d','town',{cd:5,chance:0.7});lastTown=t;t.jobs=null;deliverAt(t);}
+    if(t){toast('WELCOME TO '+t.name.toUpperCase(),'info');curTown=t;say('d','town',{cd:5,chance:0.7});lastTown=t;t.jobs=null;deliverAt(t);collectTill(t);}
     else sinceTown=0;
     curTown=t;
   }
@@ -1439,6 +1476,7 @@ function drawMini(){
 function updHUD(){
   setT($('money'),'$'+money);setT($('rank'),RANKS[rankIdx()][1]+' · '+deliveries+' RUNS');setT($('coachName'),CT().n+' · '+CT().horses+' HORSES');
   setT($('clock'),'DAY '+(Math.floor(gameMin/1440)+1)+' · '+fmtTime(gameMin)+(dayF<0.4?' · NIGHT':''));
+  {const inc=totalIncome();setT($('income'),inc?'INVESTMENTS $'+inc+'/DAY':'');}
   setT($('bounty'),bounty?'WANTED: '+bounty.got+'/'+bounty.need+' HOLLISTERS':'');
   $('hpb').style.width=clamp(coach.hp/maxHp(),0,1)*100+'%';$('hpb').style.background=coach.hp/maxHp()<0.3?'var(--blood)':'var(--sage)';
   $('stb').style.width=coach.st+'%';$('ftb').style.width=coach.fat+'%';$('ftb').style.background=coach.fat>85?'var(--blood)':coach.fat>60?'var(--brass)':'var(--dim)';
@@ -1486,6 +1524,6 @@ function begin(){
   toast('LOAD MAIL AT THE STAR, THEN HIT THE ROAD','info');
 }
 $('startBtn').onclick=begin;
-$('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}money=40;deliveries=0;upg={coach:0,oats:0};applyCoachTier();kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;W.dynamite.mag=1;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
+$('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}inv={};money=40;deliveries=0;upg={coach:0,oats:0};applyCoachTier();kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;W.dynamite.mag=1;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
 requestAnimationFrame(loop);
 </script>

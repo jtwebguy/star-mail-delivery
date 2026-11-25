@@ -50,5 +50,6 @@ Touch controls appear on phones and tablets.
   | Concord coach | 6 | 28 / 40 | 8 | 140 | Jehu rank + $600 |
   | Treasure coach (iron-plated) | 6 | 30 / 43 | 10 | 180 | Whip rank + $1,200 |
 
+- Investments: buy a stake in each town's business (a sawmill in Coloma, a quartz mill in Grass Valley, a saloon in Sonora...). Up to 3 stakes per town; each earns money every game day, which waits in that town (up to 2 days' worth) and is collected when you arrive
 - Store: ammunition, wheelwright repairs, livery rest, fresh relay teams and oats
 - Progress saved in the browser
