@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Star Mail Delivery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,6 +41,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #ammo{display:flex;gap:4px;height:18px;align-items:flex-end}
 #ammo .rd{width:5px;height:14px;background:var(--brass);box-shadow:inset 0 -5px 0 #a9761c}
 #ammo .sh{width:9px;height:18px;background:var(--blood);box-shadow:inset 0 -6px 0 var(--brass)}
+#ammo .dy{width:6px;height:18px;background:#c0392b;box-shadow:inset 0 3px 0 #e8e0c8;position:relative}
+#ammo .dy::before{content:"";position:absolute;left:2px;top:-5px;width:2px;height:5px;background:var(--brass)}
 #ammo .e{opacity:.18}
 #reserve{color:var(--dim);font-size:8px}
 #hint{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:var(--brass);text-shadow:2px 2px 0 #000;white-space:nowrap;animation:blink 1s steps(2) infinite}
@@ -135,7 +139,7 @@ body.touch #xh{display:none}
       <div><span>Whip the team</span><b>SHIFT</b></div>
       <div><span>Rest the team</span><b>STOP (FASTER IN TOWN)</b></div>
       <div><span>Aim / fire</span><b>MOUSE / CLICK</b></div>
-      <div><span>Revolver / shotgun</span><b>1 / 2 / Q</b></div>
+      <div><span>Revolver / shotgun / dynamite</span><b>1 / 2 / 3 / Q</b></div>
       <div><span>Reload</span><b>R</b></div>
       <div><span>Look back</span><b>C / RIGHT-DRAG</b></div>
       <div><span>Map with town names</span><b>N / CLICK MINIMAP</b></div>
@@ -695,8 +699,9 @@ function music(){
 /* ---------- game state ---------- */
 let state='title',gameMin=7*60,playTime=0,sinceTown=0,camYaw=0,camOff=0,camDist=26,shake=0,dayF=1,spawnT=3;
 let money=40,deliveries=0,cargo=[],upg={coach:0,oats:0},bounty=null,bountyLevel=0,curTown=null,lastTown=TB.Sacramento,kills=0;
-const W={revolver:{name:'COLT REVOLVER',mag:6,cap:6,res:30,rate:0.3,rel:1.6,range:150},shotgun:{name:'COACH GUN',mag:2,cap:2,res:10,rate:0.32,rel:1.4,range:55}};
-let wcur='revolver',fcool=0,reloadT=0,reloadW=null;
+const W={revolver:{name:'COLT REVOLVER',mag:6,cap:6,res:30,rate:0.3,rel:1.6,range:150},shotgun:{name:'COACH GUN',mag:2,cap:2,res:10,rate:0.32,rel:1.4,range:55},dynamite:{name:'DYNAMITE',mag:1,cap:3,res:0,rate:1.3,rel:0,range:75}};
+const WORDER=['revolver','shotgun','dynamite'];const nextW=()=>WORDER[(WORDER.indexOf(wcur)+1)%3];
+let wasTrig=false,wcur='revolver',fcool=0,reloadT=0,reloadW=null;
 const enemies=[],nuggets=[];
 const RANKS=[[0,'GREENHORN'],[3,'MAIL RIDER'],[8,'JEHU'],[15,'WHIP'],[25,'STAR ROUTE DRIVER'],[40,'LEGEND OF THE LODE']];
 function rankIdx(){let r=0;RANKS.forEach((x,i)=>{if(deliveries>=x[0])r=i;});return r;}
@@ -718,8 +723,8 @@ function applyCoachTier(){
   coach.hp=Math.min(coach.hp,maxHp());
 }
 const SAVEK='starmail1852-v1';
-function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0)}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0)}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -1059,6 +1064,7 @@ let lastRank=0;function checkRank(){const r=rankIdx();if(r>lastRank){lastRank=r;
 /* ---------- post office UI ---------- */
 const SHOP=[
   {k:'cart',n:'.44 CARTRIDGES ×24',p:()=>12,buy:()=>W.revolver.res+=24},
+  {k:'dyn',n:'DYNAMITE · 1 STICK',p:()=>25,buy:()=>W.dynamite.mag++,off:()=>W.dynamite.mag>=W.dynamite.cap},
   {k:'shell',n:'BUCKSHOT SHELLS ×10',p:()=>12,buy:()=>W.shotgun.res+=10},
   {k:'fix',n:'WHEELWRIGHT REPAIR',p:()=>Math.ceil((maxHp()-coach.hp)*1.2),buy:()=>coach.hp=maxHp(),off:()=>coach.hp>=maxHp()},
   {k:'coach',n:()=>{const c=COACHES[(upg.coach|0)+1];return c?'NEW '+c.n+' · '+c.horses+' HORSES<br><span class="muted">SPEED '+c.cruise+'/'+c.whip+' · '+c.sacks+' SACKS · '+c.hp+' HP</span>':'TREASURE COACH · THE FINEST ON THE ROAD';},
@@ -1083,7 +1089,7 @@ function renderPO(){
   $('jobs').innerHTML=h||'<li><div>NO MORE MAIL TODAY.</div></li>';
   $('sackNote').textContent='MAIL SACKS: '+slotsUsed()+' / '+cap()+(cargo.length?' · ABOARD: '+cargo.map(c=>c.to.toUpperCase()).join(', '):'');
   let s='';
-  SHOP.forEach((it,i)=>{const off=it.off&&it.off();const lk=!off&&it.lock?it.lock():'';const p=it.p();const nm=typeof it.n==='function'?it.n():it.n;s+=`<li><div>${nm}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':(it.k==='rest'||it.k==='relay')?'THE TEAM IS FRESH':it.k==='coach'?'YOU DRIVE THE BEST':'BOUGHT'):lk?'<span class="warn">'+lk+'</span>':'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||lk||money<p?'disabled':''}>BUY</button></li>`;});
+  SHOP.forEach((it,i)=>{const off=it.off&&it.off();const lk=!off&&it.lock?it.lock():'';const p=it.p();const nm=typeof it.n==='function'?it.n():it.n;s+=`<li><div>${nm}<br><span class="muted">${off?(it.k==='fix'?'COACH IS SOUND':(it.k==='rest'||it.k==='relay')?'THE TEAM IS FRESH':it.k==='coach'?'YOU DRIVE THE BEST':it.k==='dyn'?'YOU CARRY 3, THE MOST':'BOUGHT'):lk?'<span class="warn">'+lk+'</span>':'$'+p}</span></div><button class="btn sm" data-shop="${i}" ${off||lk||money<p?'disabled':''}>BUY</button></li>`;});
   $('shop').innerHTML=s;
 }
 $('po').addEventListener('click',ev=>{
@@ -1111,7 +1117,7 @@ addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();K[k]=true;if(e.key==='Shift')K.shift=true;
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
   if(state==='play'){
-    if(k==='1')swapTo('revolver');if(k==='2')swapTo('shotgun');if(k==='q')swapTo(wcur==='revolver'?'shotgun':'revolver');
+    if(k==='1')swapTo('revolver');if(k==='2')swapTo('shotgun');if(k==='3'||k==='g')swapTo('dynamite');if(k==='q')swapTo(nextW());
     if(k==='r')startReload();if(k==='e'&&curTown&&Math.abs(coach.v)<9)openPO();
     if(k==='c')camOff=Math.abs(camOff)>1?0:Math.PI;
     if(k==='n'){openMap();return;}
@@ -1170,7 +1176,7 @@ $('resumeBtn').onclick=()=>setPause(false);
 document.querySelectorAll('#touch button').forEach(b=>{
   const t=b.dataset.t;
   const on=e=>{e.preventDefault();auInit();TC[t]=true;b.style.filter='brightness(1.6)';
-    if(t==='swap')swapTo(wcur==='revolver'?'shotgun':'revolver');if(t==='reload')startReload();if(t==='look')camOff=Math.abs(camOff)>1?0:Math.PI;
+    if(t==='swap')swapTo(nextW());if(t==='reload')startReload();if(t==='look')camOff=Math.abs(camOff)>1?0:Math.PI;
     if(t==='post'&&curTown&&state==='play')openPO();if(t==='pause')setPause(state!=='paused');if(t==='music')AU.musicOn=!AU.musicOn;};
   const off=e=>{e.preventDefault();TC[t]=false;b.style.filter='';};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
@@ -1225,10 +1231,45 @@ function shoot(o,dir,range,dmg,col){
   else if(tt>0)puff(end.x,end.y+0.3,end.z,0xb08b5a,4,3,3,0.5,10);
   tracer(o,end,col);
 }
+/* ---------- dynamite: lobbed stick with a short fuse ---------- */
+const sticks=[];const stickMat=new THREE.MeshLambertMaterial({color:0xc0392b});
+function throwDynamite(){
+  const o=muzzle();const t=aimPt.clone();
+  const dx=t.x-o.x,dz=t.z-o.z,hd=Math.hypot(dx,dz);if(hd>W.dynamite.range){t.x=o.x+dx/hd*W.dynamite.range;t.z=o.z+dz/hd*W.dynamite.range;t.y=H(t.x,t.z);}
+  const T=0.7+Math.min(hd,W.dynamite.range)/70,g=30;
+  const v=new THREE.Vector3((t.x-o.x)/T,(t.y-o.y)/T+0.5*g*T,(t.z-o.z)/T);
+  v.x+=Math.sin(coach.a)*coach.v*0.4;v.z+=Math.cos(coach.a)*coach.v*0.4; // a little of the coach's momentum
+  const m=new THREE.Mesh(GEO.box,stickMat);m.scale.set(0.35,0.35,1.3);m.position.copy(o);scene.add(m);
+  sticks.push({m,p:o.clone(),v,t:0,fuse:T+0.25});
+  noiseHit(0.12,3000,0.25,'highpass');say('g','x',{cd:4,text:pick(['Fire in the hole!','Duck!','Catch!'])});
+}
+function explode(p){
+  const r=16;
+  noiseHit(1.4,180,1.6);noiseHit(0.5,900,0.7);tone(55,0.9,'sawtooth',0.35,0,0.5);
+  flashLight.position.set(p.x,p.y+3,p.z);flashLight.intensity=12;if(!REDUCED)shake=1;
+  puff(p.x,p.y+1,p.z,0xffd24a,30,26,14,0.5,8);puff(p.x,p.y+1,p.z,0xe8612c,30,20,12,0.7,6);
+  puff(p.x,p.y+2,p.z,0x6e675e,40,14,10,1.8,-1);puff(p.x,p.y+0.5,p.z,0x8a6a4a,30,18,16,1.2,22);
+  for(const e of enemies){if(e.dead)continue;const d=Math.hypot(e.x-p.x,e.z-p.z);if(d<r){const dir=new THREE.Vector3(e.x-p.x,0,e.z-p.z).normalize();damageEnemy(e,40+160*(1-d/r),dir);e.x+=dir.x*4;e.z+=dir.z*4;}}
+  for(const q of deputies){if(q.dead||q.leaving)continue;const d=Math.hypot(q.x-p.x,q.z-p.z);if(d<r*0.7)hurtDeputy(q,30*(1-d/(r*0.7)));}
+  const dc=Math.hypot(coach.x-p.x,coach.z-p.z);if(dc<12){hurt(26*(1-dc/12));say('d','x',{cd:3,text:pick(['Warn me next time!','You tryin\' to kill us?!'])});}
+  else if(dc<120)sayLater(0.9,'d','x',{cd:10,chance:0.6,text:pick(['Hoo-ee!','That\'ll wake the whole county.','Remind me never to cross you.'])});
+  for(const l of logs){if(l.dead)continue;if(Math.hypot(l.x-p.x,l.z-p.z)<r+7)damageLog(l,999,new THREE.Vector3(l.x,l.y,l.z));}
+}
+function updSticks(dt){
+  for(let i=sticks.length-1;i>=0;i--){
+    const s=sticks[i];s.t+=dt;s.v.y-=30*dt;s.p.addScaledVector(s.v,dt);
+    const gy=H(s.p.x,s.p.z)+0.2;if(s.p.y<gy){s.p.y=gy;s.v.multiplyScalar(0.3);s.v.y=Math.abs(s.v.y)*0.3;}
+    s.m.position.copy(s.p);s.m.rotation.x+=dt*9;s.m.rotation.y+=dt*4;
+    if(R()<0.8)puff(s.p.x,s.p.y+0.3,s.p.z,R()<0.5?0xffe14a:0xff8a3a,1,2,3,0.25,0);
+    const near=s.t>0.35&&enemies.some(e=>!e.dead&&Math.abs(e.x-s.p.x)<5&&Math.abs(e.z-s.p.z)<5&&Math.abs(H(e.x,e.z)+e.hy-s.p.y)<5);
+    if(s.t>=s.fuse||near){scene.remove(s.m);sticks.splice(i,1);explode(s.p);}
+  }
+}
 function fireNow(){
   const w=W[wcur];if(reloadT>0||fcool>0)return;
   if(w.mag<=0){SFX.empty();fcool=0.3;startReload();return;}
   w.mag--;fcool=w.rate;
+  if(wcur==='dynamite'){throwDynamite();save();return;}
   const o=muzzle();const dir=aimPt.clone().sub(o).normalize();
   if(wcur==='revolver'){const j=0.006+Math.abs(coach.v)*0.0004+coach.fat*coach.fat*0.0000075;dir.x+=(R()-0.5)*j*2;dir.y+=(R()-0.5)*j*2;dir.z+=(R()-0.5)*j*2;dir.normalize();shoot(o,dir,w.range,34);SFX.revolver();}
   else{for(let k=0;k<9;k++){const d=dir.clone();const sp=1+coach.fat/80;d.x+=(R()-0.5)*0.16*sp;d.y+=(R()-0.5)*0.1*sp;d.z+=(R()-0.5)*0.16*sp;d.normalize();shoot(o,d,w.range,13);}SFX.shotgun();if(!REDUCED)shake=Math.min(1,shake+0.25);}
@@ -1237,9 +1278,10 @@ function fireNow(){
   if(w.mag===0)startReload();
 }
 function updWeapons(dt){
+  updSticks(dt);
   fcool-=dt;flashLight.intensity=Math.max(0,flashLight.intensity-dt*60);
   if(reloadT>0){reloadT-=dt;if(reloadT<=0&&reloadW===wcur){const w=W[wcur];const n=Math.min(w.cap-w.mag,w.res);w.mag+=n;w.res-=n;}}
-  if(mouse.down||TC.fire)fireNow();
+  const trig=mouse.down||TC.fire;if(trig&&(wcur!=='dynamite'||!wasTrig))fireNow();wasTrig=trig; // one stick per click
   // guard turns to aim
   const yaw=Math.atan2(aimPt.x-coach.x,aimPt.z-coach.z)-coach.a;guard.rotation.y=yaw;
   const hd=Math.hypot(aimPt.x-coach.x,aimPt.z-coach.z);gunPivot.rotation.x=-Math.atan2(aimPt.y-(coach.y+6.6),hd);
@@ -1393,8 +1435,8 @@ function updHUD(){
   $('hpb').style.width=clamp(coach.hp/maxHp(),0,1)*100+'%';$('hpb').style.background=coach.hp/maxHp()<0.3?'var(--blood)':'var(--sage)';
   $('stb').style.width=coach.st+'%';$('ftb').style.width=coach.fat+'%';$('ftb').style.background=coach.fat>85?'var(--blood)':coach.fat>60?'var(--brass)':'var(--dim)';
   const w=W[wcur];setT($('wname'),reloadT>0?'RELOADING…':w.name);
-  const key=wcur+w.mag+'/'+w.cap;if(txtCache.get('ammo')!==key){txtCache.set('ammo',key);let h='';for(let i=0;i<w.cap;i++)h+=`<i class="${wcur==='revolver'?'rd':'sh'}${i<w.mag?'':' e'}"></i>`;$('ammo').innerHTML=h;}
-  setT($('reserve'),'RESERVE '+w.res+' · '+(wcur==='revolver'?'SHELLS '+W.shotgun.res:'CARTRIDGES '+W.revolver.res));
+  const key=wcur+w.mag+'/'+w.cap;if(txtCache.get('ammo')!==key){txtCache.set('ammo',key);let h='';for(let i=0;i<w.cap;i++)h+=`<i class="${wcur==='revolver'?'rd':wcur==='shotgun'?'sh':'dy'}${i<w.mag?'':' e'}"></i>`;$('ammo').innerHTML=h;}
+  setT($('reserve'),wcur==='dynamite'?'STICKS '+w.mag+'/'+w.cap+' · MORE AT ANY POST OFFICE':'RESERVE '+w.res+' · '+(wcur==='revolver'?'SHELLS '+W.shotgun.res:'CARTRIDGES '+W.revolver.res)+' · TNT '+W.dynamite.mag);
   const nDep=deputies.filter(q=>!q.dead&&!q.leaving).length;
   const ck=cargo.map(c=>c.to+c.type+Math.floor((c.deadline-gameMin)/10)).join('|')+cap()+'d'+nDep+'e'+escorting();
   if(txtCache.get('cargo')!==ck){txtCache.set('cargo',ck);$('cargo').innerHTML=(cargo.length?`<li><span>SACKS ${slotsUsed()}/${cap()}</span></li>`+cargo.map(c=>{const left=c.deadline-gameMin;return `<li class="${left<0?'late':''}${c.gold?' gold':''}"><span>${c.type} → ${c.to.toUpperCase()}</span><span>${fmtLeft(left)}</span></li>`;}).join(''):`<li><span>SACKS EMPTY (0/${cap()})</span></li>`)+(escorting()?`<li class="gold"><span>ESCORT: ${nDep} DEPUT${nDep===1?'Y':'IES'}</span><span>-10% SPEED</span></li>`:'');}
@@ -1436,6 +1478,6 @@ function begin(){
   toast('LOAD MAIL AT THE STAR, THEN HIT THE ROAD','info');
 }
 $('startBtn').onclick=begin;
-$('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}money=40;deliveries=0;upg={coach:0,oats:0};applyCoachTier();kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
+$('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}money=40;deliveries=0;upg={coach:0,oats:0};applyCoachTier();kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;W.dynamite.mag=1;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
 requestAnimationFrame(loop);
 </script>
