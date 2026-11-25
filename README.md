@@ -34,6 +34,7 @@ Touch controls appear on phones and tablets.
 - Sporadic split-rail fences and treelines along the roads
 - Shoot fallen logs apart to clear the road, and stop at a washed-out bridge to repair it: pay $15 for lumber and the county pays you for the work
 - Escort jobs worth big money: bank money, iron safes (take 2 sacks) and prisoners. Each brings 2 armed deputies (up to 4) who ride beside the coach, shoot threats and stop robbers from looting while they live. The coach runs 10% slower while escorting, and road agents come hunting
+- Speech bubbles: the driver, your shotgun guard, deputies, road agents and prisoners react to raids, kills, hazards, deliveries and nightfall, and chat on quiet stretches
 - One attacking group at a time (robbers, a wolf pack or a bear), with a 20-second breather after each fight
 - Mail jobs with deadlines and pay, a wanted-poster bounty, gold nuggets near mine headframes
 - Fatigue: the crew and team tire with distance (faster off-road, uphill, at night or when whipping). A tired team runs slower and your shots spread and sway. Stop to rest, or pay the livery or a fresh relay team at any post office

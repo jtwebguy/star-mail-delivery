@@ -46,6 +46,12 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #fixBtn{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);pointer-events:auto;white-space:nowrap}
 body.touch #fixBtn{bottom:calc(236px + env(safe-area-inset-bottom,0px))}
 #toasts{position:fixed;left:50%;top:26%;transform:translateX(-50%);display:grid;gap:6px;justify-items:center;width:min(92vw,560px)}
+.bub{position:fixed;left:0;top:0;max-width:190px;padding:5px 7px;background:var(--paper);color:#1a0f08;border:2px solid #000;box-shadow:2px 2px 0 #0008;font-size:8px;line-height:1.5;pointer-events:none;white-space:normal;text-align:center;animation:bin .18s steps(2)}
+.bub::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-5px;border:5px solid transparent;border-top-color:#000;border-bottom:0}
+.bub.dep{background:#d7e6f7}.bub.bad{background:#f3c9b8}.bub.pris{background:#d9d2c3}
+.bub b{display:block;font-weight:normal;font-size:6px;color:#5a3720;letter-spacing:1px}
+@keyframes bin{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.bub{animation:none}}
 .toast{background:#000b;padding:6px 10px;text-align:center;text-shadow:2px 2px 0 #000;animation:tin .25s steps(3)}
 .toast.good{color:var(--brass)}.toast.bad{color:var(--blood)}.toast.info{color:var(--paper)}
 @keyframes tin{from{transform:translateY(8px);opacity:0}}
@@ -112,6 +118,7 @@ body.touch #xh{display:none}
   <div id="hint" hidden></div>
   <button id="fixBtn" class="btn" hidden></button>
   <div id="toasts"></div>
+  <div id="bubbles"></div>
 </div>
 <div id="xh" hidden></div>
 <div id="touch" hidden>
@@ -720,7 +727,112 @@ function toast(msg,kind){const d=document.createElement('div');d.className='toas
 function fmtTime(m){const h=Math.floor(m/60)%24,mm=Math.floor(m%60);return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
 function fmtLeft(m){if(m<0)return 'LATE';const h=Math.floor(m/60),mm=Math.floor(m%60);return h+'H'+String(mm).padStart(2,'0');}
 let hpFlash=0;
-function hurt(n){if(state!=='play')return;coach.hp-=n;hpFlash=0.35;if(!REDUCED)shake=Math.min(1,shake+n*0.05);if(Math.random()<0.7)SFX.hurt();if(coach.hp<=0)wreck();}
+/* ---------- speech bubbles: short reactions and road chatter ---------- */
+const LINES={
+  raid_robber:["Road agents! Hold on!","Riders comin' up fast!","Bandits! I ain't stoppin'!","Heads down, here they come!"],
+  robber_yell:["Stand and deliver!","Throw down the box!","Stop that coach!","Hand over the mail!","Get 'em, boys!","Nobody needs to get hurt!"],
+  robber_flee:["I'm hit! Ride!","This ain't worth it!","We'll be back!","Scatter, boys!"],
+  robber_rob:["Much obliged!","Pleasure doin' business!","Thanks for the gift!"],
+  robber_free:["You're free, boss!","Let's ride, boss!"],
+  raid_wolf:["Wolves! Keep 'em movin'!","Pack's after the horses!","Hear that howl? Here they come."],
+  raid_bear:["Grizzly! Lord help us!","Bear on the road! Whip 'em!","Biggest bear I ever saw!"],
+  kill_robber:["Got one!","That's one less.","Stay down!","Dropped him!"],
+  kill_wolf:["Got the wolf!","Back off, dog!","One less mouth."],
+  kill_bear:["The bear's down!","Whew. She's down."],
+  hit:["They're hittin' the coach!","She's takin' lead!","Keep 'em off us!"],
+  lowhp:["She won't hold much longer!","We need a wheelwright, bad!"],
+  tired:["Horses are lathered up.","Team needs a rest soon."],
+  blown:["They're blown! We gotta stop."],
+  whip:["Hyah!","Git up there!","Come on, move!"],
+  deliver:["Mail's in!","Another run done.","Right on the mark."],
+  late:["Late again. Postmaster won't smile."],
+  town:["Whoa there. {town}.","{town}! Time to stretch my legs.","Here's {town}."],
+  log:["Tree down! Go around!","Deadfall ahead!"],
+  ambush_hint:["Smells like an ambush..."],
+  bridge:["Bridge is washed out!","Creek took the bridge."],
+  repair:["Hand me that hammer.","Plank by plank..."],
+  repaired:["Good as new!","She'll hold now."],
+  nugget:["Is that gold?","Ha! Color in the dirt!"],
+  dep_hire:["We'll ride along.","Nobody touches this cargo.","Sheriff sends his regards."],
+  dep_fire:["Covering you!","Take that!","Got him in my sights!"],
+  dep_down:["Man down!","They got Hank!","Deputy's hit!"],
+  dep_idle:["Keep your eyes peeled.","Quiet stretch.","All clear on the left.","Ridge looks clear."],
+  pris_idle:["My boys'll come for me.","You won't make it to {dest}.","Untie me and I'll make you rich.","Nice day for a hangin', huh?"],
+  pris_raid:["Told ya they'd come!","Over here, boys!"],
+  night:["Gettin' dark. Lantern's lit.","Wolves come out at night..."],
+  dawn:["Sun's up. Good.","Made it through the night."],
+  lowammo:["Runnin' low on shells.","Need cartridges, bad."],
+};
+const TALKS=[
+  [["d","Ever been to San Francisco?"],["g","Once. Lost my boots."]],
+  [["d","Hot day for it."],["g","Hotter in Hangtown."]],
+  [["g","Gold in them hills, you think?"],["d","Plenty. And plenty of fools."]],
+  [["d","Horses smell water."],["g","Or trouble."]],
+  [["g","Coffee'd be nice."],["d","Next stop."]],
+  [["g","Quiet out here."],["d","Too quiet."]],
+  [["d","{dest}'s still {mi} miles."],["g","Then quit talkin' and drive."]],
+  [["g","You hear that?"],["d","Just the wind. I hope."]],
+  [["d","The mail's gotta go through."],["g","Rain or shine."]],
+  [["g","Letter for me in there?"],["d","Doubt it."]],
+  [["d","Back in '49 this was all mud."],["g","Still is."]],
+  [["g","How's the team?"],["d","Ornery, but they'll do."]],
+  [["d","My pa drove freight in Missouri."],["g","And you drove west."]],
+  [["g","Dust in my teeth again."],["d","Free supper."]],
+];
+const NAMES={d:'DRIVER',g:'SHOTGUN',dep:'DEPUTY',bad:'ROAD AGENT',pris:'PRISONER'};
+const bubbles=[],sayCd={},sayQ=[];let lastSay=0,chatT=18,wasNight=false;
+const bubV=new THREE.Vector3();
+function fillLine(t){const c=cargo[0];const dest=c?c.to:(lastTown?lastTown.name:'Sacramento');const d=c?TB[c.to]:null;
+  return t.replace('{town}',curTown?curTown.name:(lastTown?lastTown.name:'town')).replace('{dest}',dest).replace('{mi}',d?Math.max(1,Math.round(Math.hypot(d.x-coach.x,d.z-coach.z)*MI)):'a few');}
+function pick(a){return a[(Math.random()*a.length)|0];}
+// who: 'd' driver, 'g' shotgun guard, 'pris' prisoner, or an entity {x,z} with kind 'dep'/'bad'
+function say(who,key,opt){
+  if(state!=='play'||!LINES[key]&&!(opt&&opt.text))return;
+  const now=performance.now()/1000;opt=opt||{};
+  const cd=opt.cd??4;if(sayCd[key]&&now-sayCd[key]<cd)return;
+  if(opt.chance!==undefined&&Math.random()>opt.chance)return;
+  sayCd[key]=now;lastSay=now;
+  const text=fillLine(opt.text||pick(LINES[key]));
+  const kind=typeof who==='string'?who:who.kind;
+  let b=bubbles.find(x=>x.who===who);
+  if(!b){if(bubbles.length>=4){const o=bubbles.shift();o.el.remove();}
+    const el=document.createElement('div');el.className='bub '+(kind==='dep'?'dep':kind==='bad'?'bad':kind==='pris'?'pris':'');$('bubbles').appendChild(el);b={el,who};bubbles.push(b);}
+  b.el.innerHTML='<b>'+NAMES[kind]+'</b>';b.el.appendChild(document.createTextNode(text));
+  b.life=2.2+text.length*0.05;
+}
+function sayLater(delay,who,key,opt){sayQ.push({t:delay,who,key,opt});}
+function bubblePos(who){
+  if(who==='d')return coachG.localToWorld(bubV.set(0.6,7.1,3.2));
+  if(who==='g')return coachG.localToWorld(bubV.set(0,8.3,-0.6));
+  if(who==='pris')return coachG.localToWorld(bubV.set(-0.8,6.2,0.4));
+  return bubV.set(who.x,H(who.x,who.z)+6.6,who.z);
+}
+function updBubbles(dt){
+  for(let i=sayQ.length-1;i>=0;i--){const q=sayQ[i];q.t-=dt;if(q.t<=0){sayQ.splice(i,1);if(typeof q.who==='string'||!q.who.dead)say(q.who,q.key,q.opt);}}
+  const placed=[];
+  for(let i=bubbles.length-1;i>=0;i--){
+    const b=bubbles[i];b.life-=dt;
+    if(b.life<=0||(b.who.dead&&b.life>0.6)){b.el.remove();bubbles.splice(i,1);continue;}
+    const v=bubblePos(b.who).project(camera);
+    if(v.z>1||v.x<-1.15||v.x>1.15||v.y<-1.1||v.y>1.2||state!=='play'){b.el.style.visibility='hidden';continue;}
+    let x=(v.x+1)/2*innerWidth,y=(1-v.y)/2*innerHeight;const w=b.el.offsetWidth,h=b.el.offsetHeight;
+    x=clamp(x,w/2+8,innerWidth-w/2-8);y=clamp(y,h+70,innerHeight-40);
+    for(const p of placed){if(Math.abs(p.x-x)<(p.w+w)/2&&Math.abs(p.y-y)<(p.h+h)/2+4)y=p.y-p.h-10;}
+    placed.push({x,y,w,h});b.el.style.visibility='visible';b.el.style.transform='translate('+(x-w/2).toFixed(0)+'px,'+(y-h-8).toFixed(0)+'px)';
+  }
+}
+function updChatter(dt){
+  const night=dayF<0.4;if(night!==wasNight){wasNight=night;if(playTime>5)say('d',night?'night':'dawn',{cd:30});}
+  if(attackActive()||curTown||Math.abs(coach.v)<4){chatT=Math.max(chatT,8);return;}
+  chatT-=dt;if(chatT>0)return;chatT=22+Math.random()*20;
+  const pris=cargo.some(c=>c.prisoner),deps=deputies.filter(q=>!q.dead&&!q.leaving);
+  const r=Math.random();
+  if(pris&&r<0.3){say('pris','pris_idle',{cd:0});if(Math.random()<0.5)sayLater(2.4,'g','x',{cd:0,text:pick(["Quiet, you.","Save it for the judge.","Keep talkin'. See where it gets ya."])});return;}
+  if(deps.length&&r<0.5){say(pick(deps),'dep_idle',{cd:0});return;}
+  if(W.revolver.res+W.shotgun.res<8&&r<0.65){say('g','lowammo',{cd:60});return;}
+  const t=pick(TALKS);t.forEach(([who,text],i)=>{if(i===0)say(who,'talk',{cd:0,text});else sayLater(2.6*i,who,'talk',{cd:0,text});});
+}
+function hurt(n){if(state!=='play')return;coach.hp-=n;if(coach.hp<maxHp()*0.3)say('d','lowhp',{cd:25});else say('d','hit',{cd:9,chance:0.35});hpFlash=0.35;if(!REDUCED)shake=Math.min(1,shake+n*0.05);if(Math.random()<0.7)SFX.hurt();if(coach.hp<=0)wreck();}
 
 /* ---------- enemies ---------- */
 function makeEnemy(type){
@@ -746,7 +858,7 @@ function makeEnemy(type){
     for(const[x,z]of[[-0.6,1.0],[0.6,1.0],[-0.6,-1.0],[0.6,-1.0]]){const p=new THREE.Group();p.position.set(x,1.3,z);g.add(p);box(0.55,1.3,0.6,m,0,-0.65,0,p);legs.push(p);}
     e={type,hp:150,max:150,r:2.6,hy:2.2,fleeSpd:16,turn:2,bounty:35};
   }
-  Object.assign(e,{g,mats,legs,x:0,z:0,a:0,v:0,cool:1+Math.random()*2,state:'hunt',phase:Math.random()*6,dead:false,deadT:0,flash:0,slot:0,slotR:0,bite:0});
+  Object.assign(e,{kind:'bad',g,mats,legs,x:0,z:0,a:0,v:0,cool:1+Math.random()*2,state:'hunt',phase:Math.random()*6,dead:false,deadT:0,flash:0,slot:0,slotR:0,bite:0});
   scene.add(g);return e;
 }
 // one attacking group at a time: fleeing riders don't count, and each fight is followed by a short breather
@@ -760,7 +872,9 @@ function spawnGroup(type,n){
   if(nearTown(sx,sz,120)||Math.abs(sx-riverX(sz))<25)return;
   const slots=[Math.PI/2,-Math.PI/2,Math.PI*0.78,-Math.PI*0.78,Math.PI];
   for(let i=0;i<n;i++){const e=makeEnemy(type);e.x=sx+(R()-0.5)*16;e.z=sz+(R()-0.5)*16;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=type==='robber'?slots[i%slots.length]:R()*6.28;e.slotR=R()*6;enemies.push(e);}
-  if(type==='robber')toast('ROAD AGENTS ON YOUR TAIL!','bad');
+  if(type==='robber'){toast('ROAD AGENTS ON YOUR TAIL!','bad');say('d','raid_robber',{cd:0});const r0=enemies[enemies.length-1];if(r0)sayLater(1.6,r0,'robber_yell',{cd:0});if(cargo.some(c=>c.prisoner))sayLater(3,'pris','pris_raid',{cd:0});}
+  if(type==='wolf')sayLater(0.8,'d','raid_wolf',{cd:0});
+  if(type==='bear')sayLater(0.6,'d','raid_bear',{cd:0});
   if(type==='wolf'){SFX.howl();toast('A WOLF PACK IS HUNTING','bad');}
   if(type==='bear'){SFX.roar();toast('GRIZZLY!','bad');}
 }
@@ -778,7 +892,7 @@ function trySpawn(){
   else if(r<pR+pW+pB)spawnGroup('bear',1);
 }
 function killEnemy(e){
-  e.dead=true;e.deadT=0;kills++;
+  e.dead=true;e.deadT=0;kills++;say('g','kill_'+e.type,{cd:3,chance:0.7});
   let pay=e.bounty;
   if(e.type==='robber'){W.revolver.res+=4;if(R()<0.4)W.shotgun.res+=2;if(bounty){bounty.got++;if(bounty.got>=bounty.need){money+=bounty.reward;toast('BOUNTY PAID: $'+bounty.reward,'good');SFX.cash();bounty=null;bountyLevel++;}}}
   if(e.type==='wolf')SFX.yelp();if(e.type==='bear')SFX.roar();
@@ -789,7 +903,7 @@ function damageEnemy(e,dmg,dir){
   puff(e.x,H(e.x,e.z)+e.hy,e.z,e.type==='robber'?0x8a1a1a:0x6a1010,6,6,4,0.5,14);SFX.hit();
   if(e.type==='bear'&&e.state!=='hunt')e.state='hunt';
   if(e.hp<=0)killEnemy(e);
-  else if(e.type==='robber'&&e.hp<e.max*0.35&&R()<0.5)e.state='flee';
+  else if(e.type==='robber'&&e.hp<e.max*0.35&&R()<0.5){e.state='flee';say(e,'robber_flee',{cd:5});}
 }
 function updEnemies(dt){
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);const safe=nearTown(coach.x,coach.z,70);
@@ -821,8 +935,8 @@ function updEnemies(dt){
       if(slow&&d<9&&!e.stole&&!guarded){
         e.stole=true;e.state='flee';
         let gi=cargo.findIndex(c=>c.prisoner);if(gi<0)gi=cargo.findIndex(c=>c.escort);if(gi<0)gi=cargo.findIndex(c=>c.gold);
-        if(gi>=0){const c=cargo[gi];cargo.splice(gi,1);toast(c.prisoner?'THE GANG FREED THE PRISONER!':'THEY TOOK THE '+c.type+'!','bad');if(c.escort)dismissDeputies(c.id,'THE DEPUTIES RIDE BACK EMPTY-HANDED');}
-        else{const amt=Math.max(5,Math.round(money*0.15));money=Math.max(0,money-amt);toast('ROBBED! -$'+amt,'bad');}
+        if(gi>=0){const c=cargo[gi];cargo.splice(gi,1);toast(c.prisoner?'THE GANG FREED THE PRISONER!':'THEY TOOK THE '+c.type+'!','bad');say(e,c.prisoner?'robber_free':'robber_rob',{cd:0});if(c.escort)dismissDeputies(c.id,'THE DEPUTIES RIDE BACK EMPTY-HANDED');}
+        else{const amt=Math.max(5,Math.round(money*0.15));money=Math.max(0,money-amt);toast('ROBBED! -$'+amt,'bad');say(e,'robber_rob',{cd:0});}
         SFX.bad();
       }
     }else if(e.type==='wolf'){
@@ -861,7 +975,7 @@ function updNuggets(dt,t){
     n.m.rotation.y+=dt*2;n.m.position.y=n.y+Math.sin(t*3+n.x)*0.3;
     const d=Math.hypot(n.x-coach.x-Math.sin(coach.a)*4,n.z-coach.z-Math.cos(coach.a)*4);
     if(d<80&&R()<dt*3)puff(n.x,n.y+0.5,n.z,0xfff2a0,1,1,3,0.6,0);
-    if(d<7){const v=8+((R()*18)|0);money+=v;SFX.coin();toast('GOLD NUGGET +$'+v,'good');puff(n.x,n.y,n.z,0xffd24a,14,8,8,0.8,12);placeNugget(n);}
+    if(d<7){const v=8+((R()*18)|0);money+=v;SFX.coin();toast('GOLD NUGGET +$'+v,'good');say('g','nugget',{cd:20,chance:0.6});puff(n.x,n.y,n.z,0xffd24a,14,8,8,0.8,12);placeNugget(n);}
   }
 }
 
@@ -874,17 +988,17 @@ function makeDeputy(){
   const g=new THREE.Group();const h=makeHorse(M,[0x8a5a32,0x6b4a2c,0xd8d0c0][(R()*3)|0],0x2a1a10);g.add(h.g);
   const p=person(M,0x2c3e5a,0xb8a27a,g,0,3.0,-0.2);box(0.2,0.2,0.06,M(0xe8b43a),0.22,0.75,0.3,p); // tin star
   box(0.15,0.15,1.4,M(0x222222),0.5,0.7,0.6,p);
-  scene.add(g);return{g,mats,legs:h.legs,x:0,z:0,a:0,v:0,hp:60,cool:1+R(),phase:R()*6,dead:false,deadT:0,leaving:false,flash:0};
+  scene.add(g);return{kind:'dep',g,mats,legs:h.legs,x:0,z:0,a:0,v:0,hp:60,cool:1+R(),phase:R()*6,dead:false,deadT:0,leaving:false,flash:0};
 }
 function hireDeputies(c){
   const active=deputies.filter(q=>!q.dead&&!q.leaving).length;const n=Math.min(c.escort,4-active);
   for(let i=0;i<n;i++){const q=makeDeputy();q.job=c.id;const used=new Set(deputies.filter(d=>!d.dead&&!d.leaving).map(d=>d.slot));let si=0;while(used.has(si))si++;q.slot=si%4;
     const[sa,sr]=DSLOTS[q.slot];q.x=coach.x+Math.sin(coach.a+sa)*sr;q.z=coach.z+Math.cos(coach.a+sa)*sr;q.a=coach.a;deputies.push(q);}
-  if(n>0)toast(n+' DEPUTIES RIDE ALONG TO GUARD THE '+c.type,'good');
+  if(n>0){toast(n+' DEPUTIES RIDE ALONG TO GUARD THE '+c.type,'good');sayLater(1,deputies[deputies.length-1],'dep_hire',{cd:0});}
 }
 function dismissDeputies(jobId,msg){let any=false;deputies.forEach(q=>{if(q.job===jobId&&!q.dead&&!q.leaving){q.leaving=true;any=true;}});if(any&&msg)toast(msg,'info');}
 function clearDeputies(){deputies.forEach(q=>scene.remove(q.g));deputies.length=0;}
-function hurtDeputy(q,n){if(q.dead)return;q.hp-=n;q.flash=0.08;if(q.hp<=0){q.dead=true;q.deadT=0;toast('A DEPUTY IS DOWN!','bad');SFX.hurt();}}
+function hurtDeputy(q,n){if(q.dead)return;q.hp-=n;q.flash=0.08;if(q.hp<=0){q.dead=true;q.deadT=0;toast('A DEPUTY IS DOWN!','bad');SFX.hurt();const o=deputies.find(x=>!x.dead&&!x.leaving);say(o||'d','dep_down',{cd:0});}}
 function updDeputies(dt){
   for(let i=deputies.length-1;i>=0;i--){
     const q=deputies[i];
@@ -903,7 +1017,7 @@ function updDeputies(dt){
         if(best){q.cool=1.1+R()*0.9;const from=new THREE.Vector3(q.x,H(q.x,q.z)+4.4,q.z);const hit=R()<0.55;
           const to=enemyC(best,new THREE.Vector3());if(!hit){to.x+=(R()-0.5)*6;to.z+=(R()-0.5)*6;}
           tracer(from,to,0x9ad0ff);noiseHit(0.18,1600,Math.max(0.08,0.45-Math.hypot(q.x-coach.x,q.z-coach.z)/120));
-          if(hit){const dir=to.clone().sub(from).normalize();damageEnemy(best,18,dir);}}
+          if(hit){const dir=to.clone().sub(from).normalize();damageEnemy(best,18,dir);}if(!q.kind)q.kind='dep';say(q,'dep_fire',{cd:8,chance:0.3});}
         else q.cool=0.4;
       }
     }
@@ -937,7 +1051,7 @@ function deliverAt(t){
   let any=false;
   for(let i=cargo.length-1;i>=0;i--){const c=cargo[i];if(c.to!==t.name)continue;
     const late=gameMin>c.deadline;const pay=late?Math.round(c.pay/2):c.pay;money+=pay;deliveries++;cargo.splice(i,1);any=true;if(c.escort)dismissDeputies(c.id,'THE DEPUTIES TIP THEIR HATS AND RIDE OFF');
-    toast((late?'LATE ':'')+c.type+' DELIVERED +$'+pay,late?'info':'good');}
+    toast((late?'LATE ':'')+c.type+' DELIVERED +$'+pay,late?'info':'good');say('d',late?'late':'deliver',{cd:3});}
   if(any){SFX.cash();const r=rankIdx();if(r!==t._rankSeen){t._rankSeen=r;}checkRank();save();}
 }
 let lastRank=0;function checkRank(){const r=rankIdx();if(r>lastRank){lastRank=r;toast('PROMOTED: '+RANKS[r][1],'good');const c=COACHES[(upg.coach|0)+1];if(c&&c.rank<=r)toast('A '+c.n+' IS FOR SALE AT ANY POST OFFICE','good');}}
@@ -1140,7 +1254,7 @@ function updCoach(dt){
   const wantWhip=(K.shift||TC.whip)&&thr>0;
   const whip=wantWhip&&coach.st>2&&coach.fat<92;
   const fatMul=1-0.5*sstep(25,100,coach.fat); // tired team runs slower
-  if(whip){coach.st-=11*dt;if(!coach.whipping)SFX.whip();}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6)*(1-coach.fat/160))*dt);
+  if(whip){coach.st-=11*dt;if(!coach.whipping){SFX.whip();say('d','whip',{cd:6,chance:0.45});}}else coach.st=Math.min(100,coach.st+(wantWhip?0:12*(1+upg.oats*0.6)*(1-coach.fat/160))*dt);
   coach.whipping=whip;
   const onRoad=RD(coach.x,coach.z)<9||!!curTown;const rv=Math.abs(coach.x-riverX(coach.z));
   const onDeck=deckAt(coach.x,coach.z)>-999;let terr=onRoad?1:0.5;if(rv<16)terr=0.35;
@@ -1161,8 +1275,8 @@ function updCoach(dt){
     coach.fat+=moved*0.011*(onRoad?1:1.9)*(whip?2.5:1)*(1+Math.max(0,slope)*3)*night*(upg.oats?0.75:1);
   }else if(coach.fat>0){coach.fat-=(curTown?6:1.6)*dt;}
   coach.fat=clamp(coach.fat,0,100);
-  if(coach.fat>=60&&coach.fatWarn<1){coach.fatWarn=1;toast('THE TEAM IS TIRING. YOUR AIM IS SLIPPING','bad');}
-  if(coach.fat>=88&&coach.fatWarn<2){coach.fatWarn=2;toast('THE TEAM IS BLOWN! STOP AND REST THEM','bad');SFX.bad();}
+  if(coach.fat>=60&&coach.fatWarn<1){coach.fatWarn=1;toast('THE TEAM IS TIRING. YOUR AIM IS SLIPPING','bad');say('d','tired',{cd:0});}
+  if(coach.fat>=88&&coach.fatWarn<2){coach.fatWarn=2;toast('THE TEAM IS BLOWN! STOP AND REST THEM','bad');SFX.bad();say('d','blown',{cd:0});}
   if(coach.fat<40)coach.fatWarn=0;
   // collisions: body + team
   let hitAny=false;
@@ -1189,11 +1303,11 @@ let repairB=null,repairT=0,fixTxt='',nearBroken=null;
 function startRepair(){
   if(!nearBroken||repairB||state!=='play')return;
   if(money<LUMBER){toast('YOU NEED $'+LUMBER+' FOR LUMBER','bad');SFX.bad();return;}
-  money-=LUMBER;repairB=nearBroken;repairT=0;toast('REPAIRING THE BRIDGE. HOLD STILL','info');
+  money-=LUMBER;repairB=nearBroken;repairT=0;toast('REPAIRING THE BRIDGE. HOLD STILL','info');say('g','repair',{cd:0});
 }
 function finishRepair(b){
   b.broken=false;b.fixed=true;buildBridge(b);
-  const pay=fixPay();money+=pay;SFX.cash();toast('BRIDGE REPAIRED! COUNTY PAYS $'+pay,'good');
+  const pay=fixPay();money+=pay;SFX.cash();toast('BRIDGE REPAIRED! COUNTY PAYS $'+pay,'good');say('d','repaired',{cd:0});
   for(let k=0;k<20;k++)puff(b.x+(R()-0.5)*8,b.deckY+0.5,b.z+(R()-0.5)*8,0xb08a5a,2,6,6,0.8,12);save();
 }
 function updRepair(dt){
@@ -1213,15 +1327,15 @@ function updRepair(dt){
 $('fixBtn').addEventListener('click',e=>{e.preventDefault();startRepair();});
 function updObstacles(){
   const now=performance.now();
-  for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');}}
+  for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');say('d','bridge',{cd:10});}}
   for(const l of logs){if(l.sprung)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
-    if(d<90){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');SFX.enemyShot(30);}
-      else toast('TREE DOWN ACROSS THE ROAD','info');}}
+    if(d<90){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');say(enemies[enemies.length-1],'robber_yell',{cd:0,text:'Surprise!'});sayLater(1.2,'d','raid_robber',{cd:0});SFX.enemyShot(30);}
+      else{toast('TREE DOWN ACROSS THE ROAD','info');say('d','log',{cd:8});if(l.ambush)sayLater(1.8,'g','ambush_hint',{cd:20,chance:0.5});}}}
 }
 function updTowns(dt){
   const t=nearTown(coach.x,coach.z,60);
   if(t!==curTown){
-    if(t){toast('WELCOME TO '+t.name.toUpperCase(),'info');lastTown=t;t.jobs=null;deliverAt(t);}
+    if(t){toast('WELCOME TO '+t.name.toUpperCase(),'info');curTown=t;say('d','town',{cd:5,chance:0.7});lastTown=t;t.jobs=null;deliverAt(t);}
     else sinceTown=0;
     curTown=t;
   }
@@ -1300,9 +1414,10 @@ function loop(now){
   if(state==='play'){
     playTime+=dt;gameMin+=dt*3;
     updCoach(dt);updObstacles();updRepair(dt);computeAim();updWeapons(dt);updEnemies(dt);updDeputies(dt);updNuggets(dt,clock);updTowns(dt);
-    updCalm(dt);spawnT-=dt;if(spawnT<=0){spawnT=2.5;trySpawn();}
+    updChatter(dt);updBubbles(dt);updCalm(dt);spawnT-=dt;if(spawnT<=0){spawnT=2.5;trySpawn();}
     updHUD();music();
   }
+  {const show=state==='play'?'':'none';if($('bubbles').style.display!==show)$('bubbles').style.display=show;}
   updParticles(dt);updTracers(dt);updSky();
   if(state==='title'){const a=clock*0.06;camera.position.set(coach.x+Math.sin(a)*90,coach.y+48,coach.z+Math.cos(a)*90);camera.lookAt(coach.x,coach.y+6,coach.z);}
   else updCamera(state==='play'?dt:0);
