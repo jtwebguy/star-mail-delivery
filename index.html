@@ -47,8 +47,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #reserve{color:var(--dim);font-size:8px}
 #hint{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);color:var(--brass);text-shadow:2px 2px 0 #000;white-space:nowrap;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
-#fixBtn{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);pointer-events:auto;white-space:nowrap}
-body.touch #fixBtn{bottom:calc(236px + env(safe-area-inset-bottom,0px))}
+#bridgeAsk{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100vw - 32px);pointer-events:auto}
+#bridgeAsk .btn{white-space:nowrap}
+body.touch #bridgeAsk{bottom:calc(236px + env(safe-area-inset-bottom,0px))}
 #toasts{position:fixed;left:50%;top:26%;transform:translateX(-50%);display:grid;gap:6px;justify-items:center;width:min(92vw,560px)}
 .bub{position:fixed;left:0;top:0;max-width:190px;padding:5px 7px;background:var(--paper);color:#1a0f08;border:2px solid #000;box-shadow:2px 2px 0 #0008;font-size:8px;line-height:1.5;pointer-events:none;white-space:normal;text-align:center;animation:bin .18s steps(2)}
 .bub::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-5px;border:5px solid transparent;border-top-color:#000;border-bottom:0}
@@ -120,7 +121,7 @@ body.touch #xh{display:none}
   </div>
   <div id="br" class="plq"><div id="wname">COLT REVOLVER</div><div id="ammo"></div><div id="reserve"></div></div>
   <div id="hint" hidden></div>
-  <button id="fixBtn" class="btn" hidden></button>
+  <div id="bridgeAsk" hidden><button id="fixBtn" class="btn" hidden></button><button id="fordBtn" class="btn alt" hidden>FORD THE CREEK</button></div>
   <div id="toasts"></div>
   <div id="bubbles"></div>
 </div>
@@ -135,16 +136,20 @@ body.touch #xh{display:none}
     <h1>STAR MAIL DELIVERY<small>GOLD COUNTRY · 1852</small></h1>
     <p class="tag">The U.S. Mail runs on Star Routes now, and the contract is yours. Drive the coach between twenty-five camps spread across a wide map of the Mother Lode, carry letters, papers and gold dust, and ride shotgun against road agents, wolf packs and grizzlies.</p>
     <div class="keys">
-      <div><span>Drive</span><b>W A S D / ARROWS</b></div>
+      <div><span>Set course (the coach drives itself)</span><b>N / CLICK MINIMAP</b></div>
+      <div><span>Head for the next delivery</span><b>ENTER</b></div>
+      <div><span>Hold / move on · brake</span><b>X · S</b></div>
+      <div><span>Look around (orbit camera)</span><b>CLICK VIEW, MOVE MOUSE</b></div>
+      <div><span>Recenter view</span><b>C</b></div>
+      <div><span>Steer yourself (cancels course)</span><b>W A D</b></div>
       <div><span>Whip the team</span><b>SHIFT</b></div>
       <div><span>Rest the team</span><b>STOP (FASTER IN TOWN)</b></div>
       <div><span>Aim / fire</span><b>MOUSE / CLICK</b></div>
       <div><span>Revolver / shotgun / dynamite</span><b>1 / 2 / 3 / Q</b></div>
       <div><span>Reload</span><b>R</b></div>
-      <div><span>Look back</span><b>C / RIGHT-DRAG</b></div>
       <div><span>Map with town names</span><b>N / CLICK MINIMAP</b></div>
       <div><span>Post office</span><b>E</b></div>
-      <div><span>Repair a broken bridge</span><b>F</b></div>
+      <div><span>At a broken bridge: repair / ford</span><b>F / H</b></div>
       <div><span>Zoom</span><b>WHEEL</b></div>
       <div><span>Music / pause</span><b>M / P</b></div>
     </div>
@@ -175,7 +180,7 @@ body.touch #xh{display:none}
 
 <div id="bigmap" class="screen" hidden>
   <div class="plq" style="display:grid;gap:10px;justify-items:center;padding:12px;max-width:100%">
-    <div class="row" style="justify-content:space-between;width:100%"><h2>GOLD COUNTRY · STAR ROUTES</h2><button class="btn sm" id="closeMap">CLOSE [N]</button></div>
+    <div class="row" style="justify-content:space-between;width:100%"><h2>CLICK A TOWN TO SET COURSE</h2><button class="btn sm" id="closeMap">CLOSE [N]</button></div>
     <canvas id="bigc" style="image-rendering:pixelated;max-width:100%;height:auto;display:block;background:var(--wood)"></canvas>
     <div class="row muted" style="justify-content:center;gap:16px"><span>▲ YOU</span><span style="color:var(--brass)">■ MAIL DESTINATION</span><span style="color:var(--sage)">$ YOUR BUSINESS</span><span style="color:var(--blood)">■ BRIDGE OUT</span><span style="color:#6aa8e0">■ BRIDGE</span></div>
   </div>
@@ -1089,7 +1094,7 @@ const SHOP=[
   {k:'relay',n:'SWAP IN A FRESH RELAY TEAM · NO WAIT',p:()=>15+CT().horses*10,buy:()=>{coach.fat=0;coach.st=100;toast('FRESH HORSES IN THE TRACES','good');},off:()=>coach.fat<1},
   {k:'oats',n:'OATS FOR THE TEAM · LESS FATIGUE',p:()=>150,buy:()=>upg.oats++,off:()=>upg.oats>=1},
 ];
-function openPO(){
+function openPO(){unlockMouse();
   if(!curTown)return;state='panel';$('po').hidden=false;$('xh').hidden=true;renderPO();setTimeout(()=>$('closePO').focus(),0);save();
 }
 function closePO(){$('po').hidden=true;state='play';if(!document.body.classList.contains('touch'))$('xh').hidden=false;}
@@ -1143,7 +1148,7 @@ function renderPO(){
 }
 $('po').addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b)return;
-  if(b.dataset.job!==undefined){const j=curTown.jobs[+b.dataset.job];if(slotsUsed()+j.slots<=cap()&&!j.taken){j.taken=true;const c={id:++cargoId,to:j.to,type:j.type,gold:j.gold,escort:j.escort,slots:j.slots,prisoner:j.prisoner,pay:j.pay,deadline:gameMin+j.due};cargo.push(c);SFX.coin();if(c.escort)hireDeputies(c);}renderPO();}
+  if(b.dataset.job!==undefined){const j=curTown.jobs[+b.dataset.job];if(slotsUsed()+j.slots<=cap()&&!j.taken){j.taken=true;const c={id:++cargoId,to:j.to,type:j.type,gold:j.gold,escort:j.escort,slots:j.slots,prisoner:j.prisoner,pay:j.pay,deadline:gameMin+j.due};cargo.push(c);SFX.coin();if(c.escort)hireDeputies(c);if(!AP.dest)setCourse(TB[c.to],true);}renderPO();}
   if(b.dataset.inv){buyStake();renderPO();}
   if(b.dataset.bounty){bounty={need:5+bountyLevel*2,got:0,reward:150+bountyLevel*100};SFX.coin();renderPO();}
   if(b.dataset.shop!==undefined){const it=SHOP[+b.dataset.shop];const p=it.p();if(money>=p&&!(it.off&&it.off())&&!(it.lock&&it.lock())){money-=p;it.buy();SFX.cash();save();}renderPO();}
@@ -1151,7 +1156,7 @@ $('po').addEventListener('click',ev=>{
 $('closePO').onclick=closePO;
 
 /* ---------- wreck ---------- */
-function wreck(){
+function wreck(){unlockMouse();clearCourse();
   state='wreck';const t=nearTown(coach.x,coach.z,99999)||lastTown;let best=t,bd=1e9;TOWNS.forEach(tw=>{const d=Math.hypot(tw.x-coach.x,tw.z-coach.z);if(d<bd){bd=d;best=tw;}});
   const fee=Math.min(money,25+Math.floor(money*0.1));money-=fee;const lost=cargo.length;cargo=[];clearDeputies();
   $('wreckText').textContent=`${lost?lost+' sack'+(lost>1?'s':'')+' of mail lost. ':''}A freight wagon hauled you to ${best.name}, and the wheelwright charged $${fee} to set her right.`;
@@ -1169,7 +1174,10 @@ addEventListener('keydown',e=>{
   if(state==='play'){
     if(k==='1')swapTo('revolver');if(k==='2')swapTo('shotgun');if(k==='3'||k==='g')swapTo('dynamite');if(k==='q')swapTo(nextW());
     if(k==='r')startReload();if(k==='e'&&curTown&&Math.abs(coach.v)<9)openPO();
-    if(k==='c')camOff=Math.abs(camOff)>1?0:Math.PI;
+    if(k==='c'){camYaw=coach.a;camPitch=0.4;}
+    if(k==='enter'){const t=nextDelivery();if(t)setCourse(t);else toast('NO MAIL ABOARD. PICK A TOWN ON THE MAP (N)','info');}
+    if(k==='x'&&AP.dest){AP.hold=!AP.hold;toast(AP.hold?'HOLDING HERE':'MOVING ON','info');}
+    if(k==='h'&&AP.ask)fordCreek();
     if(k==='n'){openMap();return;}
     if(k==='f')startRepair();
     if(k==='p'||k==='escape')setPause(true);if(k===' ')mouse.down=true;
@@ -1181,8 +1189,16 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();K[k]=false;if(e.key==='Shift')K.shift=false;if(k===' ')mouse.down=false;});
 const gl=$('gl');
 gl.addEventListener('contextmenu',e=>e.preventDefault());
-addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;const xh=$('xh');xh.style.left=e.clientX+'px';xh.style.top=e.clientY+'px';if(mouse.rdrag){camOff-=(e.clientX-mouse.lx)*0.008;mouse.lx=e.clientX;}});
-gl.addEventListener('mousedown',e=>{auInit();if(e.button===0)mouse.down=true;if(e.button===2){mouse.rdrag=true;mouse.lx=e.clientX;}});
+addEventListener('mousemove',e=>{
+  const xh=$('xh');
+  if(document.pointerLockElement===gl){camYaw-=e.movementX*0.0032;camPitch=clamp(camPitch+e.movementY*0.0025,0.05,1.05);mouse.x=innerWidth/2;mouse.y=innerHeight/2;xh.style.left='50%';xh.style.top='50%';return;}
+  mouse.x=e.clientX;mouse.y=e.clientY;xh.style.left=e.clientX+'px';xh.style.top=e.clientY+'px';
+  if(mouse.rdrag){camYaw-=(e.clientX-mouse.lx)*0.008;mouse.lx=e.clientX;}
+});
+function unlockMouse(){try{if(document.pointerLockElement)document.exitPointerLock();}catch(_){}}
+let lockHinted=false;
+document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement===gl){mouse.x=innerWidth/2;mouse.y=innerHeight/2;}else if(state==='play'&&!lockHinted){lockHinted=true;toast('CLICK THE VIEW TO LOOK AROUND WITH THE MOUSE','info');}});
+gl.addEventListener('mousedown',e=>{auInit();if(e.button===0&&!isTouch&&state==='play'&&document.pointerLockElement!==gl){try{const pr=gl.requestPointerLock();if(pr&&pr.catch)pr.catch(()=>{});}catch(_){}}if(e.button===0)mouse.down=true;if(e.button===2){mouse.rdrag=true;mouse.lx=e.clientX;}});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.rdrag=false;});
 gl.addEventListener('wheel',e=>{camDist=clamp(camDist+e.deltaY*0.02,14,48);e.preventDefault();},{passive:false});
 addEventListener('blur',()=>{for(const k in K)K[k]=false;mouse.down=false;if(state==='play')setPause(true);});
@@ -1199,6 +1215,7 @@ function buildBigBg(w,h){
 function drawBigMap(){
   const[w,h]=bigMapSize();if(bigc.width!==w||bigc.height!==h||!bigBg){bigc.width=w;bigc.height=h;bigBg=buildBigBg(w,h);}
   const P=(x,z)=>[(x-X0)/XW*w,(z-Z0)/ZW*h];bctx.drawImage(bigBg,0,0);
+  drawRoute(bctx,w,h,3);
   bridges.forEach(b=>{const[x,y]=P(b.x,b.z);bctx.fillStyle=b.broken?'#ff4a3a':'#6aa8e0';bctx.fillRect(x-3,y-3,6,6);bctx.strokeStyle='#000';bctx.strokeRect(x-3,y-3,6,6);});
   const fs=Math.round(clamp(w/62,7,11));bctx.font=fs+'px "Press Start 2P", monospace';bctx.textBaseline='middle';
   const dest=new Set(cargo.map(c=>c.to));
@@ -1215,18 +1232,28 @@ function drawBigMap(){
   bctx.fillStyle='#ff4a3a';enemies.forEach(e=>{if(e.dead)return;const[x,y]=P(e.x,e.z);bctx.fillRect(x-2,y-2,4,4);});
   const[x,y]=P(coach.x,coach.z);bctx.save();bctx.translate(x,y);bctx.rotate(-coach.a+Math.PI);bctx.fillStyle='#fff';bctx.strokeStyle='#000';bctx.lineWidth=2;bctx.beginPath();bctx.moveTo(0,-9);bctx.lineTo(6,7);bctx.lineTo(-6,7);bctx.closePath();bctx.stroke();bctx.fill();bctx.restore();
 }
-function openMap(){if(state!=='play')return;state='map';$('bigmap').hidden=false;$('xh').hidden=true;mouse.down=false;drawBigMap();}
+function openMap(){if(state!=='play')return;unlockMouse();state='map';$('bigmap').hidden=false;$('xh').hidden=true;mouse.down=false;drawBigMap();}
 function closeMap(){if(state!=='map')return;$('bigmap').hidden=true;state='play';if(!document.body.classList.contains('touch'))$('xh').hidden=false;}
 $('mini').addEventListener('click',e=>{e.stopPropagation();openMap();});
 $('closeMap').addEventListener('click',closeMap);
 $('bigmap').addEventListener('click',e=>{if(e.target.id==='bigmap')closeMap();});
+bigc.addEventListener('click',e=>{
+  const r=bigc.getBoundingClientRect();const mx=(e.clientX-r.left)*bigc.width/r.width,my=(e.clientY-r.top)*bigc.height/r.height;
+  let best=null,bd=22;TOWNS.forEach(t=>{const x=(t.x-X0)/XW*bigc.width,y=(t.z-Z0)/ZW*bigc.height;const d=Math.hypot(x-mx,y-my);if(d<bd){bd=d;best=t;}});
+  if(best){closeMap();setCourse(best);}
+});
+function drawRoute(ctx,w,h,lw){
+  if(!AP.route)return;ctx.strokeStyle='#ffd24a';ctx.lineWidth=lw;ctx.setLineDash([lw*2,lw*1.5]);ctx.beginPath();ctx.moveTo((coach.x-X0)/XW*w,(coach.z-Z0)/ZW*h);
+  for(let i=AP.ri;i<AP.route.length;i++)ctx.lineTo((AP.route[i][0]-X0)/XW*w,(AP.route[i][1]-Z0)/ZW*h);ctx.stroke();ctx.setLineDash([]);
+}
 addEventListener('resize',()=>{if(state==='map'){bigBg=null;drawBigMap();}});
-function setPause(p){if(p){state='paused';$('pause').hidden=false;}else{state='play';$('pause').hidden=true;}}
+function setPause(p){if(p){unlockMouse();state='paused';$('pause').hidden=false;}else{state='play';$('pause').hidden=true;}}
 $('resumeBtn').onclick=()=>setPause(false);
 document.querySelectorAll('#touch button').forEach(b=>{
   const t=b.dataset.t;
   const on=e=>{e.preventDefault();auInit();TC[t]=true;b.style.filter='brightness(1.6)';
     if(t==='swap')swapTo(nextW());if(t==='reload')startReload();if(t==='look')camOff=Math.abs(camOff)>1?0:Math.PI;
+    if(t==='gas'){if(AP.dest){AP.hold=!AP.hold;toast(AP.hold?'HOLDING HERE':'MOVING ON','info');}else{const tt=nextDelivery();if(tt)setCourse(tt);else openMap();}}
     if(t==='post'&&curTown&&state==='play')openPO();if(t==='pause')setPause(state!=='paused');if(t==='music')AU.musicOn=!AU.musicOn;};
   const off=e=>{e.preventDefault();TC[t]=false;b.style.filter='';};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
@@ -1344,10 +1371,82 @@ function updWeapons(dt){
 
 /* ---------- coach ---------- */
 let lastHoof=0;
+/* ---------- autopilot: the coach follows the roads to a town you pick ---------- */
+const ADJ={};
+EDGES.forEach(([a,b],k)=>{const pts=roadLines[k];let L=0;for(let i=1;i<pts.length;i++)L+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+  (ADJ[a]=ADJ[a]||[]).push({to:b,k,L,fwd:true});(ADJ[b]=ADJ[b]||[]).push({to:a,k,L,fwd:false});});
+function townPath(from,to){ // shortest road path between towns
+  const dist={},prev={},done=new Set();TOWNS.forEach(t=>dist[t.name]=Infinity);dist[from]=0;
+  for(;;){let u=null,bd=Infinity;for(const n in dist)if(!done.has(n)&&dist[n]<bd){bd=dist[n];u=n;}if(!u||u===to)break;done.add(u);
+    for(const e of ADJ[u]||[]){const nd=dist[u]+e.L;if(nd<dist[e.to]){dist[e.to]=nd;prev[e.to]={from:u,e};}}}
+  if(dist[to]===Infinity)return null;const legs=[];let c=to;while(c!==from){const p=prev[c];legs.unshift(p.e);c=p.from;}return{legs,len:dist[to]};
+}
+const polyLen=ps=>{let L=0;for(let i=1;i<ps.length;i++)L+=Math.hypot(ps[i][0]-ps[i-1][0],ps[i][1]-ps[i-1][1]);return L;};
+function planRoute(dest){
+  let route=null,cost=Infinity;
+  const tryFrom=(start,lead,leadLen)=>{
+    if(start===dest.name){if(leadLen<cost){cost=leadLen;route=lead.slice();}return;}
+    const tp=townPath(start,dest.name);if(!tp||leadLen+tp.len>=cost)return;cost=leadLen+tp.len;route=lead.slice();
+    tp.legs.forEach(e=>{const pts=roadLines[e.k];const ps=e.fwd?pts:[...pts].reverse();route.push(...ps.slice(1));});
+  };
+  const t=nearTown(coach.x,coach.z,60);
+  if(t)tryFrom(t.name,[[t.x,t.z]],0);
+  else{
+    let best=null,bd=Infinity;roadLines.forEach((pts,k)=>pts.forEach((p,i)=>{const d=Math.hypot(p[0]-coach.x,p[1]-coach.z);if(d<bd){bd=d;best={k,i};}}));
+    const pts=roadLines[best.k],[a,b]=EDGES[best.k];const toA=pts.slice(0,best.i+1).reverse(),toB=pts.slice(best.i);
+    tryFrom(a,toA,polyLen(toA)+bd);tryFrom(b,toB,polyLen(toB)+bd);
+  }
+  return route;
+}
+const AP={dest:null,route:null,ri:0,avoid:0,avoidT:0,stuck:0,rev:0,hold:false,ask:null};
+function setCourse(t,quiet){
+  if(!t)return;if(curTown===t&&Math.hypot(t.x-coach.x,t.z-coach.z)<40){toast('YOU ARE ALREADY IN '+t.name.toUpperCase(),'info');return;}
+  const r=planRoute(t);if(!r){toast('NO ROAD TO '+t.name.toUpperCase(),'bad');return;}
+  Object.assign(AP,{dest:t,route:r,ri:0,avoid:0,avoidT:0,stuck:0,rev:0,hold:false,ask:null});
+  if(!quiet)toast('COURSE SET FOR '+t.name.toUpperCase()+' · '+Math.round(polyLen(r)*MI)+' MI BY ROAD','info');
+  say('d','x',{cd:4,text:pick(['Headin\' for '+t.name+'.','Next stop, '+t.name+'.','To '+t.name+' it is.'])});
+}
+function clearCourse(msg){AP.dest=null;AP.route=null;AP.ask=null;AP.hold=false;if(msg)toast(msg,'info');}
+function nextDelivery(){if(!cargo.length)return null;let best=null,bd=Infinity;cargo.forEach(c=>{const t=TB[c.to];const d=Math.hypot(t.x-coach.x,t.z-coach.z);if(d<bd){bd=d;best=t;}});return best;}
+function autopilot(dt){
+  const r=AP.route;if(!r||!r.length)return{thr:0,steer:0};
+  const dP=i=>Math.hypot(r[i][0]-coach.x,r[i][1]-coach.z);
+  while(AP.ri<r.length-1&&(dP(AP.ri)<10||dP(AP.ri+1)<dP(AP.ri)))AP.ri++;
+  if(dP(AP.ri)>90&&!AP.ask){const nr=planRoute(AP.dest);if(nr){AP.route=nr;AP.ri=0;}return{thr:0,steer:0};}
+  const dd=Math.hypot(AP.dest.x-coach.x,AP.dest.z-coach.z);
+  if(dd<28){if(Math.abs(coach.v)<1){const t=AP.dest;clearCourse();toast('ARRIVED AT '+t.name.toUpperCase(),'good');}return{thr:-2,steer:0};}
+  // a washed-out bridge on the route: stop and ask
+  const fx=Math.sin(coach.a),fz=Math.cos(coach.a);
+  if(!AP.ask)for(const b of bridges){if(!b.broken||b.ford)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);
+    if(d<34&&((b.x-coach.x)*fx+(b.z-coach.z)*fz)>0.3*d&&r.slice(AP.ri,AP.ri+6).some(p=>Math.hypot(p[0]-b.x,p[1]-b.z)<30)){AP.ask=b;toast('THE BRIDGE IS OUT. REPAIR IT OR FORD THE CREEK?','bad');say('d','bridge',{cd:0});}}
+  if(AP.ask){if(!AP.ask.broken)AP.ask=null;else return{thr:-2,steer:0};}
+  if(AP.hold)return{thr:-2,steer:0};
+  if(AP.rev>0){AP.rev-=dt;return{thr:-1,steer:AP.avoid>0?-1:1};}
+  // look-ahead point along the route
+  const look=Math.max(16,Math.abs(coach.v)*1.1);let tx=r[AP.ri][0],tz=r[AP.ri][1];
+  {let rem=look,cx=coach.x,cz=coach.z,j=AP.ri;while(j<r.length){const sx=r[j][0]-cx,sz=r[j][1]-cz,L=Math.hypot(sx,sz);if(L>=rem){tx=cx+sx/L*rem;tz=cz+sz/L*rem;break;}rem-=L;cx=tx=r[j][0];cz=tz=r[j][1];j++;}}
+  // steer around logs, rocks, barricades and trees in the way
+  const ux=(tx-coach.x)/(Math.hypot(tx-coach.x,tz-coach.z)||1),uz=(tz-coach.z)/(Math.hypot(tx-coach.x,tz-coach.z)||1),px=uz,pz=-ux;
+  const blocked=o=>{for(const f of[0.45,0.75,1]){const x=coach.x+(tx-coach.x)*f+px*o*f,z=coach.z+(tz-coach.z)*f+pz*o*f;if(collide(x,z,2.8).hit)return true;}return false;};
+  let want=AP.avoid;
+  if(blocked(AP.avoid)){const c=[0,6,-6,10,-10,15,-15,20,-20,26,-26].sort((a,b)=>Math.abs(a-AP.avoid)-Math.abs(b-AP.avoid));const f=c.find(o=>!blocked(o));if(f!==undefined)want=f;AP.avoidT=1.6;}
+  else{AP.avoidT-=dt;if(AP.avoidT<=0&&!blocked(0))want=0;}
+  AP.avoid=lerp(AP.avoid,want,Math.min(1,dt*3));
+  tx+=px*AP.avoid;tz+=pz*AP.avoid;
+  const da=angDiff(coach.a,Math.atan2(tx-coach.x,tz-coach.z));
+  let thr=Math.abs(da)>0.9&&Math.abs(coach.v)>6?0:1;
+  if(thr>0&&Math.abs(coach.v)<1.2){AP.stuck+=dt;if(AP.stuck>1.5){AP.stuck=0;AP.rev=1.1;AP.avoid+=AP.avoid>=0?8:-8;AP.avoidT=2;}}else AP.stuck=0;
+  return{thr,steer:clamp(da*2.2,-1,1)};
+}
 function updCoach(dt){
   let thr=0,steer=0;
-  if(K.w||K.arrowup||TC.gas)thr=1;if(K.s||K.arrowdown||TC.brake)thr=-1;
-  if(K.a||K.arrowleft||TC.left)steer+=1;if(K.d||K.arrowright||TC.right)steer-=1;
+  const manual=K.w||K.arrowup||K.a||K.arrowleft||K.d||K.arrowright;
+  if(AP.dest&&manual&&!AP.ask)clearCourse('MANUAL CONTROL. PICK A TOWN ON THE MAP (N) TO DRIVE AGAIN');
+  if(AP.dest){const c=autopilot(dt);thr=c.thr;steer=c.steer;if(K.s||K.arrowdown||TC.brake)thr=-2;}
+  else{
+    if(K.w||K.arrowup||(TC.gas&&!isTouch))thr=1;if(K.s||K.arrowdown||TC.brake)thr=-1;
+    if(K.a||K.arrowleft||TC.left)steer+=1;if(K.d||K.arrowright||TC.right)steer-=1;
+  }
   const wantWhip=(K.shift||TC.whip)&&thr>0;
   const whip=wantWhip&&coach.st>2&&coach.fat<92;
   const fatMul=1-0.5*sstep(25,100,coach.fat); // tired team runs slower
@@ -1360,6 +1459,7 @@ function updCoach(dt){
   const slope=(G(coach.x+fx*4,coach.z+fz*4)-G(coach.x-fx*4,coach.z-fz*4))/8;
   const vmax=CT().cruise*terr*fatMul*(escorting()?0.9:1)*(whip?CT().whip/CT().cruise:1)*clamp(1-slope*0.9,0.45,1.25);
   if(thr>0)coach.v+=clamp(vmax-coach.v,-14*dt,13*dt);
+  else if(thr===-2){coach.v-=Math.sign(coach.v)*Math.min(Math.abs(coach.v),34*dt);} // brake to a stop, never reverse
   else if(thr<0){if(coach.v>0.5)coach.v-=34*dt;else coach.v=Math.max(-7,coach.v-9*dt);}
   else{coach.v-=Math.sign(coach.v)*Math.min(Math.abs(coach.v),(5+Math.abs(coach.v)*0.18)*dt);}
   if(coach.v>vmax)coach.v=Math.max(vmax,coach.v-16*dt);
@@ -1418,12 +1518,17 @@ function updRepair(dt){
   let t='';
   if(repairB)t='REPAIRING… '+Math.min(99,Math.floor(repairT/8*100))+'%';
   else if(nearBroken&&Math.abs(coach.v)<3)t=(isTouch?'':'[F] ')+'REPAIR BRIDGE · LUMBER $'+LUMBER+' · COUNTY PAYS $'+fixPay();
+  if(AP.ask&&!repairB&&!t)t='STOPPING AT THE BRIDGE…';
   else if(nearBroken)t='STOP THE COACH TO REPAIR THE BRIDGE';
-  if(t!==fixTxt){fixTxt=t;$('fixBtn').hidden=!t;$('fixBtn').textContent=t;$('fixBtn').disabled=!!repairB||Math.abs(coach.v)>=3;}
+  const askF=!!AP.ask&&!repairB;
+  if(t+askF!==fixTxt){fixTxt=t+askF;$('fixBtn').hidden=!t;$('fixBtn').textContent=t;$('fixBtn').disabled=!!repairB||Math.abs(coach.v)>=3;$('fordBtn').hidden=!askF;$('bridgeAsk').hidden=!t&&!askF;}
 }
 $('fixBtn').addEventListener('click',e=>{e.preventDefault();startRepair();});
+$('fordBtn').addEventListener('click',e=>{e.preventDefault();fordCreek();});
+function fordCreek(){if(!AP.ask)return;AP.ask.ford=true;AP.ask=null;toast('FORDING THE CREEK','info');say('d','x',{cd:0,text:pick(['Hold on, it\'s gonna get wet!','Hope the mail stays dry.'])});}
 function updObstacles(){
   const now=performance.now();
+  for(const b of bridges)if(b.ford&&Math.hypot(b.x-coach.x,b.z-coach.z)>200)b.ford=false;
   const fx=Math.sin(coach.a),fz=Math.cos(coach.a);const ahead=(x,z,d)=>((x-coach.x)*fx+(z-coach.z)*fz)>0.75*d;
   for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&ahead(b.x,b.z,d)&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');say('d','bridge',{cd:10});}}
   for(const l of logs){if(l.sprung||l.dead)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
@@ -1442,7 +1547,7 @@ function updTowns(dt){
   let h='';if(!curTown&&Math.abs(coach.v)<1&&coach.fat>1)h='RESTING THE TEAM… '+Math.round(coach.fat)+'%';if(curTown)h=Math.abs(coach.v)<9?(isTouch?'TAP POST · ':'[E] ')+curTown.name.toUpperCase()+' POST OFFICE':'SLOW DOWN TO VISIT THE POST OFFICE';
   if(h!==hintTxt){hintTxt=h;$('hint').hidden=!h;$('hint').textContent=h;}
   TOWNS.forEach(tw=>{if(tw.star)tw.star.position.y=tw.h+(tw.star.userData.by||(tw.star.userData.by=tw.star.position.y-tw.h))+Math.sin(performance.now()/400+tw.i)*0.6;});
-  const tgt=cargo.length?TB[cargo[0].to]:null;
+  const tgt=AP.dest||(cargo.length?TB[cargo[0].to]:null);
   if(tgt){beam.visible=true;beam.position.set(tgt.x,tgt.h+200,tgt.z);beam.material.opacity=0.2+Math.sin(performance.now()/300)*0.08;}else beam.visible=false;
 }
 const cDay=new THREE.Color(0x7cc0ee),cDusk=new THREE.Color(0xe8875a),cNight=new THREE.Color(0x141a2e),sky=new THREE.Color(),sunC=new THREE.Color();
@@ -1456,14 +1561,20 @@ function updSky(){
   sun.intensity=0.22+0.75*dayF;hemi.intensity=0.28+0.4*dayF;
   lanternLight.intensity=(1-dayF)*2.2;stars.material.opacity=1-dayF;stars.position.copy(camera.position);
 }
+// orbit camera: the view circles the coach and always faces where you aim
+let camPitch=0.4;const locked=()=>document.pointerLockElement===gl;
 function updCamera(dt){
-  if(!mouse.rdrag&&Math.abs(camOff)<1)camOff*=Math.exp(-dt*0.6);
-  camYaw+=angDiff(camYaw,coach.a+camOff)*Math.min(1,dt*3);
-  const back=Math.abs(angDiff(0,camOff))>1.5;
-  const cx=coach.x-Math.sin(camYaw)*camDist,cz=coach.z-Math.cos(camYaw)*camDist;
-  let cy=coach.y+camDist*0.5;const gh=H(cx,cz)+3;if(cy<gh)cy=gh;
-  tmpV.set(cx,cy,cz);camera.position.lerp(tmpV,Math.min(1,dt*6));
-  const la=back?0:10;camera.lookAt(coach.x+Math.sin(camYaw)*la,coach.y+4,coach.z+Math.cos(camYaw)*la);
+  if(isTouch){
+    if(AP.dest&&TC.left)camOff+=1.6*dt;else if(AP.dest&&TC.right)camOff-=1.6*dt;
+    camYaw+=angDiff(camYaw,coach.a+camOff)*Math.min(1,dt*2);
+  }else if(!locked()&&state==='play'&&!mouse.rdrag){ // no mouse capture: push the cursor toward an edge to turn the view
+    const nx=(mouse.x/innerWidth-0.5)*2;if(Math.abs(nx)>0.6)camYaw-=Math.sign(nx)*((Math.abs(nx)-0.6)/0.4)*2.4*dt;
+  }
+  const cp=Math.cos(camPitch),sp=Math.sin(camPitch);
+  const cx=coach.x-Math.sin(camYaw)*camDist*cp,cz=coach.z-Math.cos(camYaw)*camDist*cp;
+  let cy=coach.y+4+camDist*sp;const gh=H(cx,cz)+3;if(cy<gh)cy=gh;
+  tmpV.set(cx,cy,cz);camera.position.lerp(tmpV,Math.min(1,dt*10));
+  camera.lookAt(coach.x+Math.sin(camYaw)*14,coach.y+6,coach.z+Math.cos(camYaw)*14);
   if(shake>0){shake=Math.max(0,shake-dt*3);camera.position.x+=(R()-0.5)*shake;camera.position.y+=(R()-0.5)*shake;}
 }
 
@@ -1481,6 +1592,7 @@ function drawMini(){
   mctx.drawImage(mbg,0,0);const tgt=cargo.length?cargo[0].to:null;const blink=(performance.now()/300|0)%2;
   TOWNS.forEach(t=>{const[x,y]=m2(t.x,t.z);const isT=cargo.some(c=>c.to===t.name);mctx.fillStyle=t.name===tgt&&blink?'#fff':isT?'#ffd24a':'#2b1a10';mctx.fillRect(x-2,y-2,5,5);});
   bridges.forEach(b=>{const[x,y]=m2(b.x,b.z);mctx.fillStyle=b.broken?'#ff4a3a':'#3a6ea5';mctx.fillRect(x-1,y-1,3,3);});
+  drawRoute(mctx,MW,MH,1);
   mctx.fillStyle='#ff4a3a';enemies.forEach(e=>{if(e.dead)return;const[x,y]=m2(e.x,e.z);mctx.fillRect(x-1,y-1,2,2);});
   mctx.fillStyle='#6aa8ff';deputies.forEach(q=>{const[x,y]=m2(q.x,q.z);mctx.fillRect(x-1,y-1,2,2);});
   const[x,y]=m2(coach.x,coach.z);mctx.save();mctx.translate(x,y);mctx.rotate(-coach.a+Math.PI);mctx.fillStyle='#fff';mctx.beginPath();mctx.moveTo(0,-5);mctx.lineTo(3.5,4);mctx.lineTo(-3.5,4);mctx.closePath();mctx.fill();mctx.strokeStyle='#000';mctx.stroke();mctx.restore();
@@ -1498,9 +1610,9 @@ function updHUD(){
   const nDep=deputies.filter(q=>!q.dead&&!q.leaving).length;
   const ck=cargo.map(c=>c.to+c.type+Math.floor((c.deadline-gameMin)/10)).join('|')+cap()+'d'+nDep+'e'+escorting();
   if(txtCache.get('cargo')!==ck){txtCache.set('cargo',ck);$('cargo').innerHTML=(cargo.length?`<li><span>SACKS ${slotsUsed()}/${cap()}</span></li>`+cargo.map(c=>{const left=c.deadline-gameMin;return `<li class="${left<0?'late':''}${c.gold?' gold':''}"><span>${c.type} → ${c.to.toUpperCase()}</span><span>${fmtLeft(left)}</span></li>`;}).join(''):`<li><span>SACKS EMPTY (0/${cap()})</span></li>`)+(escorting()?`<li class="gold"><span>ESCORT: ${nDep} DEPUT${nDep===1?'Y':'IES'}</span><span>-10% SPEED</span></li>`:'');}
-  const tgt=cargo.length?TB[cargo[0].to]:null;
-  if(tgt){const ang=Math.atan2(tgt.x-coach.x,tgt.z-coach.z);const rel=angDiff(camYaw,ang);$('arrow').style.transform='rotate('+(-rel)+'rad)';setT($('tgt'),tgt.name.toUpperCase()+' · '+(Math.hypot(tgt.x-coach.x,tgt.z-coach.z)*MI).toFixed(1)+' MI');}
-  else{$('arrow').style.transform='rotate(0rad)';setT($('tgt'),curTown?'PICK UP MAIL AT THE STAR':'NO MAIL ABOARD');}
+  const tgt=AP.dest||(cargo.length?TB[cargo[0].to]:null);
+  if(tgt){const ang=Math.atan2(tgt.x-coach.x,tgt.z-coach.z);const rel=angDiff(camYaw,ang);$('arrow').style.transform='rotate('+(-rel)+'rad)';setT($('tgt'),(AP.dest?(AP.hold?'HOLDING · ':AP.ask?'BRIDGE OUT · ':'EN ROUTE · '):'NO COURSE · ')+tgt.name.toUpperCase()+' · '+(Math.hypot(tgt.x-coach.x,tgt.z-coach.z)*MI).toFixed(1)+' MI');}
+  else{$('arrow').style.transform='rotate(0rad)';setT($('tgt'),curTown?'PICK UP MAIL AT THE STAR':'NO COURSE · PRESS N TO PICK A TOWN');}
   $('xh').classList.toggle('on',!!aimEnemy);if(!isTouch){$('xh').style.transform='translate('+swayX.toFixed(1)+'px,'+swayY.toFixed(1)+'px)';}
   if(hpFlash>0){hpFlash-=0.016;$('flash').style.opacity=Math.max(0,hpFlash*0.5);}
   if(frame%3===0)drawMini();

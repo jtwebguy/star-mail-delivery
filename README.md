@@ -10,25 +10,32 @@ Open `index.html` in a browser (it loads Three.js r128 from cdnjs), or turn on G
 
 ## Controls
 
+The coach drives itself: pick a destination and it follows the roads there.
+
 | Action | Keys |
 | --- | --- |
-| Drive | W A S D / arrows |
+| Set course (pick a town on the map) | N / click the minimap |
+| Head for the next delivery | Enter |
+| Hold / move on | X |
+| Brake | S |
 | Whip the team | Shift |
-| Rest the team | Stop (faster in town) |
+| Look around (orbit camera) | Click the view, then move the mouse |
+| Recenter view | C |
+| Steer yourself (cancels the course) | W A D |
 | Aim / fire | Mouse / click |
 | Revolver / shotgun / dynamite | 1 / 2 / 3 / Q |
 | Reload | R |
-| Look back | C / right-drag |
-| Map with town names | N / click the minimap |
 | Post office | E |
-| Repair a broken bridge | F |
+| At a washed-out bridge: repair / ford | F / H |
 | Zoom | Mouse wheel |
 | Music / pause | M / P |
 
-Touch controls appear on phones and tablets.
+Touch controls appear on phones and tablets (GO sets or holds the course; LEFT/RIGHT turn the view while en route).
 
 ## Features
 
+- Autopilot: the coach plans the shortest road route to the town you choose, steers around logs, rocks and barricades, and stops on arrival. At a washed-out bridge it stops and asks whether to repair it for pay or ford the creek
+- Orbit camera: the view circles the coach and always faces where you aim
 - Wide terrain map (about 6,100 × 8,100 units) with towns placed from real latitude and longitude, long winding roads, the Sacramento River and Sierra snowfields
 - Road hazards: deadfall logs across the road (some hide a robber ambush), rockslides in the mountains, and creek bridges, some washed out so you must ford the creek
 - Sporadic split-rail fences and treelines along the roads
