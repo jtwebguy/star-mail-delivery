@@ -878,23 +878,35 @@ function spawnGroup(type,n){
   const sx=clamp(coach.x+Math.sin(base)*dist,X0+30,X0+XW-30),sz=clamp(coach.z+Math.cos(base)*dist,Z0+30,Z0+ZW-30);
   if(nearTown(sx,sz,120)||Math.abs(sx-riverX(sz))<25)return;
   const slots=[Math.PI/2,-Math.PI/2,Math.PI*0.78,-Math.PI*0.78,Math.PI];
-  for(let i=0;i<n;i++){const e=makeEnemy(type);e.x=sx+(R()-0.5)*16;e.z=sz+(R()-0.5)*16;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=type==='robber'?slots[i%slots.length]:R()*6.28;e.slotR=R()*6;enemies.push(e);}
+  // big gangs (when deputies ride along) arrive in two waves and spread into an outer ring
+  const first=type==='robber'&&n>6?Math.ceil(n*0.55):n;
+  const place=(i,ox,oz)=>{const e=makeEnemy(type);e.x=ox+(R()-0.5)*16;e.z=oz+(R()-0.5)*16;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);
+    if(type==='robber'&&i>=slots.length){e.slot=(i%2?1:-1)*(0.35+R()*2.6);e.slotR=8+R()*14;}else{e.slot=type==='robber'?slots[i%slots.length]:R()*6.28;e.slotR=R()*6;}enemies.push(e);};
+  for(let i=0;i<first;i++)place(i,sx,sz);
+  if(first<n){const rest=n-first;setTimeout(()=>{if(state!=='play'&&state!=='panel'&&state!=='map'&&state!=='paused')return;
+    const b2=coach.a+Math.PI+(R()-0.5)*1.2;const rx=clamp(coach.x+Math.sin(b2)*150,X0+30,X0+XW-30),rz=clamp(coach.z+Math.cos(b2)*150,Z0+30,Z0+ZW-30);
+    for(let i=0;i<rest;i++)place(first+i,rx,rz);toast('MORE RIDERS COMING! '+n+' IN THE GANG','bad');say('d','x',{cd:0,text:pick(['There\'s more of \'em!','Whole gang\'s out today!'])});},6000);}
   if(type==='robber'){toast('ROAD AGENTS ON YOUR TAIL!','bad');say('d','raid_robber',{cd:0});const r0=enemies[enemies.length-1];if(r0)sayLater(1.6,r0,'robber_yell',{cd:0});if(cargo.some(c=>c.prisoner))sayLater(3,'pris','pris_raid',{cd:0});}
   if(type==='wolf')sayLater(0.8,'d','raid_wolf',{cd:0});
   if(type==='bear')sayLater(0.6,'d','raid_bear',{cd:0});
   if(type==='wolf'){SFX.howl();toast('A WOLF PACK IS HUNTING','bad');}
   if(type==='bear'){SFX.roar();toast('GRIZZLY!','bad');}
 }
+// robber gang size: 2-5 normally; with deputies aboard the gangs grow up to 15
+function gangSize(){
+  const lvl=rankIdx(),dep=deputies.filter(q=>!q.dead&&!q.leaving).length;
+  if(!dep)return 2+((R()*(2+Math.min(2,lvl/2)))|0);
+  return Math.min(15,4+dep*2+((R()*4)|0)+Math.min(2,lvl>>1));
+}
 function trySpawn(){
   if(attackActive()||calmT>0)return;
   if(playTime<25||sinceTown<6)return;if(nearTown(coach.x,coach.z,130))return;
-  if(enemies.filter(e=>!e.dead).length>=9)return;
   const t=trendT(coach.x,coach.z),night=dayF<0.4,onRoad=RD(coach.x,coach.z)<12,gold=cargo.some(c=>c.gold),lvl=rankIdx();const vip=escorting();
   const pR=(onRoad?0.055:0.02)*(vip?3.2:gold?2.6:1)*(1+lvl*0.12)*(night?0.7:1);
   const pW=(night?0.075:0.018)*(t>0.3?1.4:0.8);
   const pB=t>0.45?0.035:(t>0.3?0.012:0);
   const r=R();
-  if(r<pR)spawnGroup('robber',2+((R()*(2+Math.min(2,lvl/2)))|0));
+  if(r<pR)spawnGroup('robber',gangSize());
   else if(r<pR+pW)spawnGroup('wolf',3+((R()*3)|0));
   else if(r<pR+pW+pB)spawnGroup('bear',1);
 }
@@ -1416,7 +1428,7 @@ function updObstacles(){
   for(const b of bridges){if(!b.broken)continue;const d=Math.hypot(b.x-coach.x,b.z-coach.z);if(d<110&&ahead(b.x,b.z,d)&&now-b.warned>20000){b.warned=now;toast('BRIDGE OUT AHEAD! FORD THE CREEK OR STOP TO REPAIR IT','bad');say('d','bridge',{cd:10});}}
   for(const l of logs){if(l.sprung||l.dead)continue;const d=Math.hypot(l.x-coach.x,l.z-coach.z);
     if(d<30&&!ahead(l.x,l.z,d)){l.sprung=true;continue;} // passed it or it's off to the side: stay quiet
-    if(d<90&&ahead(l.x,l.z,d)&&roadDistAt(l.x,l.z)<9&&RD(coach.x,coach.z)<14){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');say(enemies[enemies.length-1],'robber_yell',{cd:0,text:'Surprise!'});sayLater(1.2,'d','raid_robber',{cd:0});SFX.enemyShot(30);}
+    if(d<90&&ahead(l.x,l.z,d)&&roadDistAt(l.x,l.z)<9&&RD(coach.x,coach.z)<14){l.sprung=true;if(l.ambush&&playTime>15&&!attackActive()){const n=deputies.some(q=>!q.dead&&!q.leaving)?Math.min(15,gangSize()):2+((R()*2)|0);for(let i=0;i<n;i++){const e=makeEnemy('robber');const sd=i%2?1:-1;e.x=l.x+Math.cos(coach.a)*sd*30+(R()-0.5)*10;e.z=l.z-Math.sin(coach.a)*sd*30+(R()-0.5)*10;e.a=Math.atan2(coach.x-e.x,coach.z-e.z);e.slot=[Math.PI/2,-Math.PI/2,Math.PI*0.78][i%3];e.slotR=R()*6;enemies.push(e);}toast('AMBUSH AT THE DEADFALL!','bad');say(enemies[enemies.length-1],'robber_yell',{cd:0,text:'Surprise!'});sayLater(1.2,'d','raid_robber',{cd:0});SFX.enemyShot(30);}
       else{toast('TREE DOWN ACROSS THE ROAD','info');say('d','log',{cd:8});if(l.ambush)sayLater(1.8,'g','ambush_hint',{cd:20,chance:0.5});}}}
 }
 function updTowns(dt){

@@ -33,7 +33,7 @@ Touch controls appear on phones and tablets.
 - Road hazards: deadfall logs across the road (some hide a robber ambush), rockslides in the mountains, and creek bridges, some washed out so you must ford the creek
 - Sporadic split-rail fences and treelines along the roads
 - Shoot fallen logs apart to clear the road, and stop at a washed-out bridge to repair it: pay $15 for lumber and the county pays you for the work
-- Escort jobs worth big money: bank money, iron safes (take 2 sacks) and prisoners. Each brings 2 armed deputies (up to 4) who ride beside the coach, shoot threats and stop robbers from looting while they live. The coach runs 10% slower while escorting, and road agents come hunting
+- Escort jobs worth big money: bank money, iron safes (take 2 sacks) and prisoners. Each brings 2 armed deputies (up to 4) who ride beside the coach, shoot threats and stop robbers from looting while they live. The coach runs 10% slower while escorting, and road agents come hunting in bigger gangs: up to 15 riders with 4 deputies aboard, arriving in two waves
 - Dynamite: start with 1 stick (carry up to 3, $25 each at any post office). Throw it at the crosshair; it bursts on contact or after a short fuse, killing nearby enemies and blasting fallen logs and rockslides off the road. Too close and it hurts your own coach
 - Speech bubbles: the driver, your shotgun guard, deputies, road agents and prisoners react to raids, kills, hazards, deliveries and nightfall, and chat on quiet stretches
 - One attacking group at a time (robbers, a wolf pack or a bear), with a 20-second breather after each fight
