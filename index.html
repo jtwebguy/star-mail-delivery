@@ -51,6 +51,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #bridgeAsk .btn{white-space:nowrap}
 body.touch #bridgeAsk{bottom:calc(236px + env(safe-area-inset-bottom,0px))}
 #toasts{position:fixed;left:50%;top:26%;transform:translateX(-50%);display:grid;gap:6px;justify-items:center;width:min(92vw,560px)}
+#tut{position:fixed;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:min(520px,calc(100vw - 32px));display:grid;gap:6px;z-index:2;border-color:var(--brass)}
+#tutText{color:var(--paper);line-height:1.8}
+@media (max-width:640px){#tut{top:calc(150px + env(safe-area-inset-top,0px))}}
 .bub{position:fixed;left:0;top:0;max-width:190px;padding:5px 7px;background:var(--paper);color:#1a0f08;border:2px solid #000;box-shadow:2px 2px 0 #0008;font-size:8px;line-height:1.5;pointer-events:none;white-space:normal;text-align:center;animation:bin .18s steps(2)}
 .bub::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-5px;border:5px solid transparent;border-top-color:#000;border-bottom:0}
 .bub.dep{background:#d7e6f7}.bub.bad{background:#f3c9b8}.bub.pris{background:#d9d2c3}
@@ -123,6 +126,7 @@ body.touch #xh{display:none}
   <div id="hint" hidden></div>
   <div id="bridgeAsk" hidden><button id="fixBtn" class="btn" hidden></button><button id="fordBtn" class="btn alt" hidden>FORD THE CREEK</button></div>
   <div id="toasts"></div>
+  <div id="tut" class="plq" hidden><div class="row" style="justify-content:space-between;gap:12px"><span id="tutStep" style="color:var(--sage)"></span><button class="btn sm alt" id="tutSkip" style="pointer-events:auto">SKIP TUTORIAL</button></div><div id="tutText"></div><div id="tutHint" class="muted"></div></div>
   <div id="bubbles"></div>
 </div>
 <div id="xh" hidden></div>
@@ -153,7 +157,7 @@ body.touch #xh{display:none}
       <div><span>Zoom</span><b>WHEEL</b></div>
       <div><span>Music / pause</span><b>M / P</b></div>
     </div>
-    <div class="row"><button class="btn" id="startBtn">CLIMB ABOARD</button><button class="btn alt" id="newBtn" hidden>NEW CONTRACT</button><span class="muted" id="saveNote"></span></div>
+    <div class="row"><button class="btn" id="startBtn">CLIMB ABOARD</button><button class="btn alt" id="newBtn" hidden>NEW CONTRACT</button><button class="btn alt" id="tutBtn">TUTORIAL</button><span class="muted" id="saveNote"></span></div>
   </div>
 </div>
 
@@ -730,8 +734,9 @@ function applyCoachTier(){
   coach.hp=Math.min(coach.hp,maxHp());
 }
 const SAVEK='starmail1852-v1';
-function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,inv,gameMin,fat:coach.fat,fixedB:bridges.map((b,i)=>b.fixed?i:-1).filter(i=>i>=0),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0),rocksGone:slides.flatMap((sl,i)=>sl.rocks.map((k,j)=>k.gone?i+':'+j:null)).filter(Boolean)}));}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;inv=s.inv||{};coach.fat=s.fat||0;(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;buildBridge(b);}});(s.rocksGone||[]).forEach(id=>{const[i,j]=id.split(':').map(Number);const k=slides[i]&&slides[i].rocks[j];if(k&&!k.gone){k.gone=true;scene.remove(k.m);obClear([k.o]);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
+function save(){try{localStorage.setItem(SAVEK,JSON.stringify({money,deliveries,upg,kills,bountyLevel,res:W.revolver.res,sres:W.shotgun.res,dyn:W.dynamite.mag,inv,gameMin,fat:coach.fat,bridgeState:bridges.map(b=>[b.broken?1:0,b.fixed?1:0,Math.round(b.breakAt||0)]),clearedL:logs.map((l,i)=>l.dead?i:-1).filter(i=>i>=0),rocksGone:slides.flatMap((sl,i)=>sl.rocks.map((k,j)=>k.gone?i+':'+j:null)).filter(Boolean)}));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVEK)||'null');if(!s)return false;money=s.money;deliveries=s.deliveries;{const o=s.upg||{};const tri=(k,base)=>base*k*(k+1)/2;const refund=tri(o.team|0,300)+tri(o.iron|0,250)+tri(o.sacks|0,200);upg={coach:o.coach|0,oats:o.oats|0};if(refund){money+=refund;setTimeout(()=>toast('OLD UPGRADES REFUNDED: +$'+refund+'. COACHES NOW COME BY RANK','good'),1500);}}kills=s.kills||0;bountyLevel=s.bountyLevel||0;W.revolver.res=s.res;W.shotgun.res=s.sres;W.dynamite.mag=s.dyn??1;inv=s.inv||{};coach.fat=s.fat||0;if(s.bridgeState)s.bridgeState.forEach((st,i)=>{const b=bridges[i];if(!b)return;const br=!!st[0];b.fixed=!!st[1];b.breakAt=st[2]||0;if(br!==b.broken){b.broken=br;buildBridge(b);}});
+(s.fixedB||[]).forEach(i=>{const b=bridges[i];if(b&&b.broken){b.broken=false;b.fixed=true;b.breakAt=(s.gameMin||420)+(2+R()*3)*1440;buildBridge(b);}});(s.rocksGone||[]).forEach(id=>{const[i,j]=id.split(':').map(Number);const k=slides[i]&&slides[i].rocks[j];if(k&&!k.gone){k.gone=true;scene.remove(k.m);obClear([k.o]);}});(s.clearedL||[]).forEach(i=>{const l=logs[i];if(l&&!l.dead){l.dead=true;scene.remove(l.g);obClear(l.obs);}});gameMin=s.gameMin||420;return true;}catch(e){return false;}}
 
 /* ---------- HUD helpers ---------- */
 const txtCache=new Map();function setT(el,v){if(txtCache.get(el)!==v){txtCache.set(el,v);el.textContent=v;}}
@@ -904,6 +909,7 @@ function gangSize(){
   return Math.min(15,4+dep*2+((R()*4)|0)+Math.min(2,lvl>>1));
 }
 function trySpawn(){
+  if(TUT.on)return; // no raids during the tutorial
   if(attackActive()||calmT>0)return;
   if(playTime<25||sinceTown<6)return;if(nearTown(coach.x,coach.z,130))return;
   const t=trendT(coach.x,coach.z),night=dayF<0.4,onRoad=RD(coach.x,coach.z)<12,gold=cargo.some(c=>c.gold),lvl=rankIdx();const vip=escorting();
@@ -1348,6 +1354,7 @@ function updSticks(dt){
   }
 }
 function fireNow(){
+  if(TUT.on)TUT.mark.shot=true;
   const w=W[wcur];if(reloadT>0||fcool>0)return;
   if(w.mag<=0){SFX.empty();fcool=0.3;startReload();return;}
   w.mag--;fcool=w.rate;
@@ -1503,7 +1510,7 @@ function startRepair(){
   money-=LUMBER;repairB=nearBroken;repairT=0;toast('REPAIRING THE BRIDGE. HOLD STILL','info');say('g','repair',{cd:0});
 }
 function finishRepair(b){
-  b.broken=false;b.fixed=true;buildBridge(b);
+  b.broken=false;b.fixed=true;b.breakAt=gameMin+(2+R()*3)*1440;buildBridge(b); // holds 2-5 game days, then the creek may take it again
   const pay=fixPay();money+=pay;SFX.cash();toast('BRIDGE REPAIRED! COUNTY PAYS $'+pay,'good');say('d','repaired',{cd:0});
   for(let k=0;k<20;k++)puff(b.x+(R()-0.5)*8,b.deckY+0.5,b.z+(R()-0.5)*8,0xb08a5a,2,6,6,0.8,12);save();
 }
@@ -1526,6 +1533,43 @@ function updRepair(dt){
 $('fixBtn').addEventListener('click',e=>{e.preventDefault();startRepair();});
 $('fordBtn').addEventListener('click',e=>{e.preventDefault();fordCreek();});
 function fordCreek(){if(!AP.ask)return;AP.ask.ford=true;AP.ask=null;toast('FORDING THE CREEK','info');say('d','x',{cd:0,text:pick(['Hold on, it\'s gonna get wet!','Hope the mail stays dry.'])});}
+// bridges wash out again: repaired ones after 2-5 game days, intact ones every so often; never in sight of the coach
+bridges.forEach(b=>{if(!b.broken)b.breakAt=7*60+(4+rnd()*8)*1440;});
+const MAX_OUT=14; // never more than this many bridges out at once
+let washT=0;
+function updWashouts(dt){
+  washT-=dt;if(washT>0)return;washT=5;
+  if(bridges.filter(b=>b.broken).length>=MAX_OUT)return;
+  for(const b of bridges){
+    if(b.broken||!b.breakAt||gameMin<b.breakAt)continue;
+    if(Math.hypot(b.x-coach.x,b.z-coach.z)<300||(AP.route&&AP.route.slice(AP.ri,AP.ri+8).some(p=>Math.hypot(p[0]-b.x,p[1]-b.z)<40)))continue;
+    b.broken=true;b.fixed=false;b.ford=false;b.breakAt=0;buildBridge(b);
+    let nt=TOWNS[0],nd=1e9;TOWNS.forEach(t=>{const d=Math.hypot(t.x-b.x,t.z-b.z);if(d<nd){nd=d;nt=t;}});
+    toast('HIGH WATER: THE BRIDGE NEAR '+nt.name.toUpperCase()+' WASHED OUT','bad');save();break;
+  }
+}
+/* ---------- tutorial: one step at a time, advancing as the player does each thing ---------- */
+const TUT={on:false,i:0,t:0,mark:{}};
+const T=(desk,touch)=>isTouch&&touch?touch:desk;
+const TSTEPS=[
+  {text:()=>T('Welcome to Sacramento, driver. The post office is under the gold star. Stop the coach in town and press E.','Welcome to Sacramento, driver. The post office is under the gold star. Tap POST.'),done:()=>state==='panel'},
+  {text:()=>'Take a mail job with TAKE. The pay, distance and deadline are listed. Gold dust and escort jobs pay more but draw robbers.',done:()=>cargo.length>0},
+  {text:()=>T('Close the post office with E (or HIT THE TRAIL). The coach drives itself to the town you are carrying mail to.','Close the post office. The coach drives itself to the town you are carrying mail to.'),done:()=>state==='play'&&!!AP.dest&&Math.abs(coach.v)>4},
+  {text:()=>T('Click the view, then move the mouse to look around the coach. The crosshair is where you shoot.','Turn the view with LEFT and RIGHT while en route.'),hint:()=>T('Esc gives the mouse back. C recenters the view.',''),done:()=>Math.abs(angDiff(TUT.mark.yaw??camYaw,camYaw))>1.2},
+  {text:()=>T('You ride shotgun. 1 revolver, 2 shotgun, 3 dynamite. Click to fire, R to reload. Try a shot now.','You ride shotgun. GUN switches weapons and FIRE shoots the nearest threat. Try a shot now.'),done:()=>TUT.mark.shot},
+  {text:()=>T('Press N to open the map. Click any town to change course. Enter heads for your nearest delivery.','Tap the minimap to open the map. Tap any town to change course.'),done:()=>state==='map'},
+  {text:()=>T('Watch the bars: COACH is damage, WIND is for whipping (Shift), FATIGUE slows the team and spoils your aim. X holds the coach to rest.','Watch the bars: COACH is damage, WIND is for whipping, FATIGUE slows the team and spoils your aim. GO holds the coach to rest.'),wait:9},
+  {text:()=>'At a washed-out bridge the coach stops: repair it for pay or ford the creek. Road agents, wolves and bears come later. Deliver your mail at the golden beam. Good luck!',wait:10},
+];
+function startTutorial(){TUT.on=true;TUT.i=0;TUT.t=0;TUT.mark={};$('tut').hidden=false;showTut();}
+function endTutorial(msg){TUT.on=false;$('tut').hidden=true;try{localStorage.setItem(SAVEK+'-tut','1');}catch(_){}if(msg)toast(msg,'good');}
+function showTut(){const st=TSTEPS[TUT.i];$('tutStep').textContent='TUTORIAL '+(TUT.i+1)+'/'+TSTEPS.length;$('tutText').textContent=st.text();const h=st.hint?st.hint():'';$('tutHint').textContent=h;$('tutHint').hidden=!h;TUT.mark.yaw=camYaw;}
+function updTutorial(dt){
+  if(!TUT.on)return;$('tut').hidden=state!=='play'&&state!=='panel'&&state!=='map';
+  const st=TSTEPS[TUT.i];TUT.t+=dt;
+  if((st.done&&st.done())||(st.wait&&TUT.t>st.wait)){TUT.i++;TUT.t=0;SFX.coin();if(TUT.i>=TSTEPS.length){endTutorial('TUTORIAL COMPLETE');return;}showTut();}
+}
+$('tutSkip').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();endTutorial('TUTORIAL SKIPPED. PRESS N ANY TIME FOR THE MAP');});
 function updObstacles(){
   const now=performance.now();
   for(const b of bridges)if(b.ford&&Math.hypot(b.x-coach.x,b.z-coach.z)>200)b.ford=false;
@@ -1625,11 +1669,12 @@ function loop(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;clock+=dt;frame++;
   if(state==='play'){
     playTime+=dt;gameMin+=dt*3;
-    updCoach(dt);updObstacles();updRepair(dt);computeAim();updWeapons(dt);updEnemies(dt);updDeputies(dt);updNuggets(dt,clock);updTowns(dt);
+    updCoach(dt);updObstacles();updWashouts(dt);updRepair(dt);computeAim();updWeapons(dt);updEnemies(dt);updDeputies(dt);updNuggets(dt,clock);updTowns(dt);
     updChatter(dt);updBubbles(dt);updCalm(dt);spawnT-=dt;if(spawnT<=0){spawnT=2.5;trySpawn();}
     updHUD();music();
   }
   {const show=state==='play'?'':'none';if($('bubbles').style.display!==show)$('bubbles').style.display=show;}
+  updTutorial(dt);
   updParticles(dt);updTracers(dt);updSky();
   if(state==='title'){const a=clock*0.06;camera.position.set(coach.x+Math.sin(a)*90,coach.y+48,coach.z+Math.cos(a)*90);camera.lookAt(coach.x,coach.y+6,coach.z);}
   else updCamera(state==='play'?dt:0);
@@ -1645,9 +1690,11 @@ function begin(){
   auInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();
   $('title').hidden=true;$('hud').hidden=false;state='play';curTown=null;sinceTown=0;camera.position.set(coach.x-Math.sin(coach.a)*camDist,coach.y+14,coach.z-Math.cos(coach.a)*camDist);
   if(isTouch){document.body.classList.add('touch');$('touch').hidden=false;}else $('xh').hidden=false;
-  toast('LOAD MAIL AT THE STAR, THEN HIT THE ROAD','info');
+  let seen=false;try{seen=localStorage.getItem(SAVEK+'-tut')==='1';}catch(_){}
+  if(!seen)startTutorial();else toast('LOAD MAIL AT THE STAR, THEN HIT THE ROAD','info');
 }
 $('startBtn').onclick=begin;
+$('tutBtn').onclick=()=>{try{localStorage.removeItem(SAVEK+'-tut');}catch(_){}placeCoach(TB.Sacramento);begin();};
 $('newBtn').onclick=()=>{try{localStorage.removeItem(SAVEK);}catch(e){}inv={};money=40;deliveries=0;upg={coach:0,oats:0};applyCoachTier();kills=0;bountyLevel=0;W.revolver.res=30;W.shotgun.res=10;W.dynamite.mag=1;gameMin=420;lastRank=0;coach.hp=maxHp();begin();};
 requestAnimationFrame(loop);
 </script>

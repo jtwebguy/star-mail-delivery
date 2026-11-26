@@ -34,10 +34,11 @@ Touch controls appear on phones and tablets (GO sets or holds the course; LEFT/R
 
 ## Features
 
+- Tutorial: a short guided first run (post office, taking mail, setting off, looking around, shooting, the map, the bars). Skippable, and replayable from the title screen
 - Autopilot: the coach plans the shortest road route to the town you choose, steers around logs, rocks and barricades, and stops on arrival. At a washed-out bridge it stops and asks whether to repair it for pay or ford the creek
 - Orbit camera: the view circles the coach and always faces where you aim
 - Wide terrain map (about 6,100 × 8,100 units) with towns placed from real latitude and longitude, long winding roads, the Sacramento River and Sierra snowfields
-- Road hazards: deadfall logs across the road (some hide a robber ambush), rockslides in the mountains, and creek bridges, some washed out so you must ford the creek
+- Road hazards: deadfall logs across the road (some hide a robber ambush), rockslides in the mountains, and creek bridges, some washed out so you must ford the creek. Bridges wash out again over time: repaired ones after 2-5 game days, intact ones every so often (never more than 14 out at once, and never one you're about to cross)
 - Sporadic split-rail fences and treelines along the roads
 - Shoot fallen logs apart to clear the road, and stop at a washed-out bridge to repair it: pay $15 for lumber and the county pays you for the work
 - Escort jobs worth big money: bank money, iron safes (take 2 sacks) and prisoners. Each brings 2 armed deputies (up to 4) who ride beside the coach, shoot threats and stop robbers from looting while they live. The coach runs 10% slower while escorting, and road agents come hunting in bigger gangs: up to 15 riders with 4 deputies aboard, arriving in two waves
